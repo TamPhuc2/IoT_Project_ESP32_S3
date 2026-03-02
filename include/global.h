@@ -9,6 +9,8 @@
 extern float glob_temperature;
 extern float glob_humidity;
 
+extern char lcd_buffer[2][16];
+
 
 extern String ssid;
 extern String password;

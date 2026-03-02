@@ -4,11 +4,9 @@ LiquidCrystal_I2C lcd(33,16,2);
 
 
 void temp_humi_monitor(void *pvParameters){
-
     Wire.begin(11, 12);
     Serial.begin(115200);
     dht20.begin();
-
     while (1){
         /* code */
         
@@ -17,8 +15,6 @@ void temp_humi_monitor(void *pvParameters){
         float temperature = dht20.getTemperature();
         // Reading humidity
         float humidity = dht20.getHumidity();
-
-        
 
         // Check if any reads failed and exit early
         if (isnan(temperature) || isnan(humidity)) {
@@ -41,5 +37,12 @@ void temp_humi_monitor(void *pvParameters){
         
         vTaskDelay(5000);
     }
+}
+
+void temp_humo_update_buffer_lcd(float temp, float humi){
     
+}
+
+void temp_humi_lcd_display(void *pvParameters){
+
 }

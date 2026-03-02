@@ -1,7 +1,7 @@
 #include "global.h"
 float glob_temperature = 0;
 float glob_humidity = 0;
-
+char lcd_buffer[2][16] = {"Temp: 0.00C", "Humid: 0.00%"};
 
 String ssid = "ESP32-YOUR NETWORK HERE!!!";
 String password = "12345678";
