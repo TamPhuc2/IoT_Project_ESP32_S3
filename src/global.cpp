@@ -1,7 +1,8 @@
 #include "global.h"
 float glob_temperature = 0;
 float glob_humidity = 0;
-char lcd_buffer[2][16] = {"Temp: 0.00C", "Humi: 0.00"};
+int glob_humi_state = 1;
+char lcd_buffer[2][17] = {"Temp: 0.00C", "Humi: 0.00"};
 
 String ssid = "ESP32-YOUR NETWORK HERE!!!";
 String password = "12345678";
@@ -29,4 +30,22 @@ void get_sensor_data(float *temp, float *humi) {
         if (humi) *humi = glob_humidity;
         xSemaphoreGive(xDataMutex);
     }
+}
+
+void set_humi_state(int state) {
+    if (xDataMutex != NULL) {
+        xSemaphoreTake(xDataMutex, portMAX_DELAY);
+        glob_humi_state = state;
+        xSemaphoreGive(xDataMutex);
+    }
+}
+
+int get_humi_state() {
+    int state = 1;
+    if (xDataMutex != NULL) {
+        xSemaphoreTake(xDataMutex, portMAX_DELAY);
+        state = glob_humi_state;
+        xSemaphoreGive(xDataMutex);
+    }
+    return state;
 }

@@ -27,11 +27,27 @@ void temp_humi_monitor(void *pvParameters){
 }
 
 
-void temp_humi_update_buffer_lcd(float temp, float humi){
-    snprintf(lcd_buffer[0], sizeof(lcd_buffer[0]), "Temp: %.2fC", temp);
-    snprintf(lcd_buffer[1], sizeof(lcd_buffer[1]), "Humi: %.2f%%", humi);
-
-    // Condition for more state
+void temp_humi_update_buffer_lcd(float temp, float humi, int state){
+    if (state == 1) {
+        snprintf(lcd_buffer[0], sizeof(lcd_buffer[0]), "Temp: %.2fC     ", temp);
+        snprintf(lcd_buffer[1], sizeof(lcd_buffer[1]), "Humi: %.2f%%    ", humi);
+    } 
+    else if (state == 2) {
+        snprintf(lcd_buffer[0], sizeof(lcd_buffer[0]), "    CRITICAL    ");
+        snprintf(lcd_buffer[1], sizeof(lcd_buffer[1]), "Humi low: %.1f%% ", humi);
+    } 
+    else if (state == 3) {
+        snprintf(lcd_buffer[0], sizeof(lcd_buffer[0]), "    WARNING     ");
+        snprintf(lcd_buffer[1], sizeof(lcd_buffer[1]), "Humi low: %.1f%% ", humi);
+    } 
+    else if (state == 4) {
+        snprintf(lcd_buffer[0], sizeof(lcd_buffer[0]), "    WARNING     ");
+        snprintf(lcd_buffer[1], sizeof(lcd_buffer[1]), "Humi high:%.1f%% ", humi);
+    } 
+    else if (state == 5) {
+        snprintf(lcd_buffer[0], sizeof(lcd_buffer[0]), "    CRITICAL    ");
+        snprintf(lcd_buffer[1], sizeof(lcd_buffer[1]), "Humi high:%.1f%% ", humi);
+    }
 }
 
 void temp_humi_lcd_display(void *pvParameters){
@@ -46,7 +62,8 @@ void temp_humi_lcd_display(void *pvParameters){
     while(1){
       float temp, humi;
       get_sensor_data(&temp, &humi);
-      temp_humi_update_buffer_lcd(temp, humi);
+      int state = get_humi_state();
+      temp_humi_update_buffer_lcd(temp, humi, state);
       xSemaphoreTake(xI2CMutex, portMAX_DELAY);
       lcd.setCursor(0, 0);
       lcd.print(lcd_buffer[0]);
