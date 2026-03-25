@@ -12,6 +12,12 @@
 #define THRESHOLD_HUMI_WARNING_HIGH   (70.0f)
 #define THRESHOLD_HUMI_CRITICAL_HIGH  (90.0f)
 
+// Temperature Thresholds
+#define THRESHOLD_TEMP_CRITICAL_LOW      (10.0f)
+#define THRESHOLD_TEMP_WARNING_LOW       (20.0f)
+#define THRESHOLD_TEMP_WARNING_HIGH      (40.0f)
+#define THRESHOLD_TEMP_CRITICAL_HIGH     (50.0f)
+
 extern float glob_temperature;
 extern float glob_humidity;
 
