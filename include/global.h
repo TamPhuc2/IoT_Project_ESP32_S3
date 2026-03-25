@@ -10,7 +10,7 @@ extern float glob_temperature;
 extern float glob_humidity;
 
 extern char lcd_buffer[2][16];
-
+extern SemaphoreHandle_t xI2CMutex;
 
 extern String ssid;
 extern String password;
@@ -21,4 +21,9 @@ extern boolean isWifiConnected;
 
 extern boolean isWifiConnected;
 extern SemaphoreHandle_t xBinarySemaphoreInternet;
+
+extern SemaphoreHandle_t xDataMutex;
+void set_sensor_data(float temp, float humi);
+void get_sensor_data(float *temp, float *humi);
+
 #endif
