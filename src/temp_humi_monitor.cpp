@@ -29,8 +29,8 @@ void temp_humi_monitor(void *pvParameters){
 
 void temp_humi_update_buffer_lcd(float temp, float humi, int state){
     if (state == 1) {
-        snprintf(lcd_buffer[0], sizeof(lcd_buffer[0]), "temp: %.2fC     ", temp);
-        snprintf(lcd_buffer[1], sizeof(lcd_buffer[1]), "humi: %.2f%%    ", humi);
+        snprintf(lcd_buffer[0], sizeof(lcd_buffer[0]), "Temp: %.2fC     ", temp);
+        snprintf(lcd_buffer[1], sizeof(lcd_buffer[1]), "Humi: %.2f%%    ", humi);
     } 
     else if (state == 2) {
         snprintf(lcd_buffer[0], sizeof(lcd_buffer[0]), "    CRITICAL    ");
