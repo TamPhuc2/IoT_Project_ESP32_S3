@@ -2,74 +2,142 @@
 DHT20 dht20;
 LiquidCrystal_I2C lcd(33,16,2);
 
+// Local function to format the LCD buffer purely within this file scope
+static void temp_humi_update_buffer_lcd(char buf[2][17], float temp, float humi, int state){
+    const char* statusStr = "";
+    if (state == CRITICAL_COLD) statusStr = "CRITICAL_COLD";
+    else if (state == COOL) statusStr = "COOL";
+    else if (state == NORMAL) statusStr = "NORMAL";
+    else if (state == HOT) statusStr = "HOT";
+    else if (state == CRITICAL_HOT) statusStr = "CRITICAL_HOT";
+
+    // Canh giữa (Center-align) trên màn hình 16 cột
+    int len = strlen(statusStr);
+    int padding = (16 - len) / 2;
+    
+    // Khởi tạo mảng trống 16 dấu cách để đè toàn bộ màn hình cũ
+    char tempBuf[17];
+    memset(tempBuf, ' ', 16);
+    tempBuf[16] = '\0';
+    
+    // Copy chữ Tên trạng thái vào vị trí Padding
+    memcpy(tempBuf + padding, statusStr, len);
+    snprintf(buf[0], 17, "%s", tempBuf);
+
+    // Format Nhiệt độ & Độ ẩm ở hàng 2
+    snprintf(buf[1], 17, "T:%2.1fC H:%2.1f%%", temp, humi);
+}
+
 void temp_humi_monitor(void *pvParameters){
+  SystemHandles* handles = (SystemHandles*)pvParameters;
+  int lastState = -1;
+
   Wire.begin(GPIO_NUM_11, GPIO_NUM_12);
   Serial.begin(115200);
   
-  xSemaphoreTake(xI2CMutex, portMAX_DELAY);
+  xSemaphoreTake(handles->mutexI2C, portMAX_DELAY);
   dht20.begin();
-  xSemaphoreGive(xI2CMutex);
+  xSemaphoreGive(handles->mutexI2C);
   
   while(1){
-    xSemaphoreTake(xI2CMutex, portMAX_DELAY);
+    xSemaphoreTake(handles->mutexI2C, portMAX_DELAY);
     dht20.read();
     float temperature = dht20.getTemperature();
     float humidity = dht20.getHumidity();
-    xSemaphoreGive(xI2CMutex);
+    xSemaphoreGive(handles->mutexI2C);
 
-    set_sensor_data(temperature, humidity);
-    Serial.print("Temp: "); Serial.print(temperature); Serial.print(" *C\n");
-    Serial.print("Humi: "); Serial.print(humidity); Serial.print(" %\n");
-    //Serial.println();
+    // Priority logic: checks extreme states across BOTH sensors to determine overall LCD Status
+    int currentState = DEFAULT_STATE; // Default to NORMAL
 
+    // // CRITICAL COLD
+    // if (temperature < TEMP_CRITICAL_COLD || humidity < HUMI_CRITICAL_COLD) {
+    //     currentState = CRITICAL_COLD;
+    // }
+    // // COOL
+    // else if ((temperature >= TEMP_CRITICAL_COLD && temperature < TEMP_COOL) || 
+    //          (humidity >= HUMI_CRITICAL_COLD && humidity < HUMI_COOL)) {
+    //     currentState = COOL; 
+    // } 
+    // // CRITICAL HOT
+    // else if (temperature >= TEMP_HOT || humidity >= HUMI_HOT) {
+    //     currentState = CRITICAL_HOT; 
+    // } 
+    // // HOT
+    // else if ((temperature >= TEMP_NORMAL && temperature < TEMP_HOT) || 
+    //          (humidity >= HUMI_NORMAL && humidity < HUMI_HOT)) {
+    //     currentState = HOT; 
+    // }
+    // //NORMAL
+    // else {
+    //     currentState = NORMAL; // NORMAL
+    // }
+    // CRITICAL COLD
+    if (temperature < TEMP_CRITICAL_COLD) {
+        currentState = CRITICAL_COLD;
+    }
+    // COOL
+    else if (temperature >= TEMP_CRITICAL_COLD && temperature < TEMP_COOL) {
+        currentState = COOL; 
+    } 
+    // CRITICAL HOT
+    else if (temperature >= TEMP_HOT) {
+        currentState = CRITICAL_HOT; 
+    } 
+    // HOT
+    else if (temperature >= TEMP_NORMAL && temperature < TEMP_HOT) {
+        currentState = HOT; 
+    }
+    //NORMAL
+    else {
+        currentState = NORMAL; // NORMAL
+    }
+
+    SensorData freshData = {temperature, humidity, currentState};
+
+    // Broadcast data to Queues
+    xQueueOverwrite(handles->qLed, &freshData);
+    xQueueOverwrite(handles->qNeo, &freshData);
+    xQueueOverwrite(handles->qLcd, &freshData);
+
+    // Give Semaphore to wake up LCD task if there's a state change or if it's the very first loop!
+    if (currentState != lastState) {
+        xSemaphoreGive(handles->semLcd);
+        lastState = currentState;
+    }
+
+    Serial.print("Temp: "); Serial.print(temperature); Serial.print(" *C ");
+    Serial.print("Humi: "); Serial.print(humidity); Serial.print(" %");
+    Serial.println();
     vTaskDelay(5000);  
   }
 }
 
-
-void temp_humi_update_buffer_lcd(float temp, float humi, int state){
-    if (state == 1) {
-        snprintf(lcd_buffer[0], sizeof(lcd_buffer[0]), "Temp: %.2fC     ", temp);
-        snprintf(lcd_buffer[1], sizeof(lcd_buffer[1]), "Humi: %.2f%%    ", humi);
-    } 
-    else if (state == 2) {
-        snprintf(lcd_buffer[0], sizeof(lcd_buffer[0]), "    CRITICAL    ");
-        snprintf(lcd_buffer[1], sizeof(lcd_buffer[1]), "Humi low: %.1f%% ", humi);
-    } 
-    else if (state == 3) {
-        snprintf(lcd_buffer[0], sizeof(lcd_buffer[0]), "    WARNING     ");
-        snprintf(lcd_buffer[1], sizeof(lcd_buffer[1]), "Humi low: %.1f%% ", humi);
-    } 
-    else if (state == 4) {
-        snprintf(lcd_buffer[0], sizeof(lcd_buffer[0]), "    WARNING     ");
-        snprintf(lcd_buffer[1], sizeof(lcd_buffer[1]), "Humi high:%.1f%% ", humi);
-    } 
-    else if (state == 5) {
-        snprintf(lcd_buffer[0], sizeof(lcd_buffer[0]), "    CRITICAL    ");
-        snprintf(lcd_buffer[1], sizeof(lcd_buffer[1]), "Humi high:%.1f%% ", humi);
-    }
-}
-
 void temp_humi_lcd_display(void *pvParameters){
-    // Delay slightly to ensure Wire.begin() in temp_humi_monitor runs first
-    vTaskDelay(100);
+    SystemHandles* handles = (SystemHandles*)pvParameters;
+    SensorData data;
+    char local_lcd_buffer[2][17] = {"                ", "                "};
 
-    xSemaphoreTake(xI2CMutex, portMAX_DELAY);
+    vTaskDelay(pdMS_TO_TICKS(100)); // Delay slightly to ensure Wire.begin() in temp_humi_monitor runs first
+
+    xSemaphoreTake(handles->mutexI2C, portMAX_DELAY);
     lcd.begin();
     lcd.backlight();
-    xSemaphoreGive(xI2CMutex);
+    xSemaphoreGive(handles->mutexI2C);
 
     while(1){
-      float temp, humi;
-      get_sensor_data(&temp, &humi);
-      int state = get_humi_state();
-      temp_humi_update_buffer_lcd(temp, humi, state);
-      xSemaphoreTake(xI2CMutex, portMAX_DELAY);
-      lcd.setCursor(0, 0);
-      lcd.print(lcd_buffer[0]);
-      lcd.setCursor(0, 1);
-      lcd.print(lcd_buffer[1]);
-      xSemaphoreGive(xI2CMutex);
-      vTaskDelay(1000);
+      // Suspend task until a Semaphore is given (Event-driven paradigm)
+      xSemaphoreTake(handles->semLcd, portMAX_DELAY);
+
+      // Peek the data from queue (non-blocking) just in case someone else needed it. 
+      if (xQueuePeek(handles->qLcd, &data, 0) == pdTRUE) {
+          temp_humi_update_buffer_lcd(local_lcd_buffer, data.temperature, data.humidity, data.state);
+          
+          xSemaphoreTake(handles->mutexI2C, portMAX_DELAY);
+          lcd.setCursor(0, 0);
+          lcd.print(local_lcd_buffer[0]);
+          lcd.setCursor(0, 1);
+          lcd.print(local_lcd_buffer[1]);
+          xSemaphoreGive(handles->mutexI2C);
+      }
     }
 }

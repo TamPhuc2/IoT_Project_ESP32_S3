@@ -1,21 +1,29 @@
 #include "led_blinky.h"
 
 void led_blinky(void *pvParameters){
+    SystemHandles* handles = (SystemHandles*)pvParameters;
+    SensorData data;
+    float currentTemp = 25.0f; // init with safe normal value
+
     pinMode(LED_GPIO, OUTPUT);
   
     while(1){
-        float currentTemp = 25.0f; // init with safe normal value
-        get_sensor_data(&currentTemp, NULL);
+        // Non-blocking peek from Queue. 
+        if (xQueuePeek(handles->qLed, &data, 0) == pdTRUE) {
+            currentTemp = data.temperature;
+        }
+
         int delay_time = 1000; 
 
-        //(,10] [50,)
-        if(currentTemp <= THRESHOLD_TEMP_CRITICAL_LOW || currentTemp >= THRESHOLD_TEMP_CRITICAL_HIGH){
+        // critical cold or critical hot
+        if(currentTemp < TEMP_CRITICAL_COLD || currentTemp >= TEMP_HOT){
           delay_time = 100;  
         } 
-        //[20, 40)
-        else if(currentTemp >= THRESHOLD_TEMP_WARNING_LOW && currentTemp < THRESHOLD_TEMP_WARNING_HIGH){
+        // NORMAL
+        else if(currentTemp >= TEMP_COOL && currentTemp < TEMP_NORMAL){
           delay_time = 1000; 
         } 
+        // COOL or HOT
         else{
           delay_time = 500;
         }

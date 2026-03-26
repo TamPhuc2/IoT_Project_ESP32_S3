@@ -1,6 +1,8 @@
 #include "neo_blinky.h"
 
 void neo_blinky(void *pvParameters){
+    SystemHandles* handles = (SystemHandles*)pvParameters;
+    SensorData data;
 
     Adafruit_NeoPixel strip(LED_COUNT, NEO_PIN, NEO_GRB + NEO_KHZ800);
     strip.begin();
@@ -18,7 +20,9 @@ void neo_blinky(void *pvParameters){
     while(1){   
         // update humi value after 1s / 50 ticks * 20ms               
         if(tick_count % 50 == 0) {
-            get_sensor_data(NULL, &currentHumi);
+            if (xQueuePeek(handles->qNeo, &data, 0) == pdTRUE) {
+                currentHumi = data.humidity;
+            }
             
             // humidity threshold
             if(currentHumi < 0) currentHumi = 0;
@@ -46,32 +50,18 @@ void neo_blinky(void *pvParameters){
         current_g += (target_g - current_g) * 0.05;
         current_b += (target_b - current_b) * 0.05;
 
-        // logic blinky rgb led and humi_state
+        // Logic blinky rgb led and state
         bool led_on = true;
-        int state = 1;
-
-        if(currentHumi <= THRESHOLD_HUMI_CRITICAL_LOW) {
-            state = 2; // Critical low
-            led_on = ((tick_count / 10) % 2 == 0); // blinky each 200ms
-        }
-        else if(currentHumi > THRESHOLD_HUMI_CRITICAL_LOW && currentHumi <= THRESHOLD_HUMI_WARNING_LOW) {
-            state = 3; // Warning low
-            led_on = ((tick_count / 25) % 2 == 0); // blinky each 500ms
-        }
-        else if(currentHumi > THRESHOLD_HUMI_WARNING_LOW && currentHumi <= THRESHOLD_HUMI_WARNING_HIGH) {
-            state = 1; // Normal
-            led_on = true;
-        }
-        else if(currentHumi > THRESHOLD_HUMI_WARNING_HIGH && currentHumi <= THRESHOLD_HUMI_CRITICAL_HIGH) {
-            state = 4; // Warning high
-            led_on = ((tick_count / 25) % 2 == 0); // blinky each 500ms
-        }
-        else{
-            state = 5; // Critical high
-            led_on = ((tick_count / 10) % 2 == 0); // blinky each 200ms
-        }
         
-        set_humi_state(state);
+        if(currentHumi < HUMI_CRITICAL_COLD || currentHumi >= HUMI_HOT) {
+            led_on = ((tick_count / 10) % 2 == 0); // blinky each 200ms
+        }
+        else if(currentHumi >= HUMI_COOL && currentHumi < HUMI_NORMAL) {
+            led_on = true;                         
+        }
+        else {
+            led_on = ((tick_count / 25) % 2 == 0); // blinky each 500ms
+        }
 
         if(led_on){
             strip.setPixelColor(0, strip.Color((uint8_t)current_r, (uint8_t)current_g, (uint8_t)current_b));

@@ -14,8 +14,9 @@ bool connecting = false;
 
 String mainPage()
 {
-  float temperature, humidity;
-  get_sensor_data(&temperature, &humidity);
+  float temperature = 25.0;
+  float humidity = 60.0;
+  // get_sensor_data(&temperature, &humidity);
   String led1 = led1_state ? "ON" : "OFF";
   String led2 = led2_state ? "ON" : "OFF";
 
@@ -303,8 +304,9 @@ void handleToggle()
 
 void handleSensors()
 {
-  float t, h;
-  get_sensor_data(&t, &h);
+  float t = 25.0;
+  float h = 60.0;
+  // get_sensor_data(&t, &h);
   String json = "{\"temp\":" + String(t) + ",\"hum\":" + String(h) + "}";
   server.send(200, "application/json", json);
 }

@@ -5,39 +5,50 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/semphr.h"
+#include "freertos/queue.h"
 
-// Humidity Thresholds
-#define THRESHOLD_HUMI_CRITICAL_LOW   (10.0f)
-#define THRESHOLD_HUMI_WARNING_LOW    (30.0f)
-#define THRESHOLD_HUMI_WARNING_HIGH   (70.0f)
-#define THRESHOLD_HUMI_CRITICAL_HIGH  (90.0f)
 
-// Temperature Thresholds
-#define THRESHOLD_TEMP_CRITICAL_LOW      (10.0f)
-#define THRESHOLD_TEMP_WARNING_LOW       (20.0f)
-#define THRESHOLD_TEMP_WARNING_HIGH      (40.0f)
-#define THRESHOLD_TEMP_CRITICAL_HIGH     (50.0f)
+#define TEMP_CRITICAL_COLD      10
+#define TEMP_COOL               18
+#define TEMP_NORMAL 		    30
+#define TEMP_HOT		        35
 
-extern float glob_temperature;
-extern float glob_humidity;
+#define HUMI_CRITICAL_COLD 	    30
+#define HUMI_COOL 		        40
+#define HUMI_NORMAL 		    60
+#define HUMI_HOT 		        70
 
-extern char lcd_buffer[2][17];
-extern SemaphoreHandle_t xI2CMutex;
+
+#define DEFAULT_STATE       0
+#define CRITICAL_COLD       1
+#define COOL                2
+#define NORMAL              3
+#define HOT                 4
+#define CRITICAL_HOT        5
 
 extern String ssid;
 extern String password;
 extern String wifi_ssid;
 extern String wifi_password;
 extern boolean isWifiConnected;
-
-
-extern boolean isWifiConnected;
 extern SemaphoreHandle_t xBinarySemaphoreInternet;
 
-extern SemaphoreHandle_t xDataMutex;
-void set_sensor_data(float temp, float humi);
-void get_sensor_data(float *temp, float *humi);
-void set_humi_state(int state);
-int get_humi_state();
+// --- RTOS DATA STRUCTURES ---
+
+// Struct for data transmission across queues
+struct SensorData {
+    float temperature;
+    float humidity;
+    int state;
+};
+
+// Struct holding system handles injected into tasks
+struct SystemHandles {
+    QueueHandle_t qLed;         // Queue for led_blinky task
+    QueueHandle_t qNeo;         // Queue for neo_blinky task
+    QueueHandle_t qLcd;         // Queue for temp_humi_lcd_display task
+    SemaphoreHandle_t semLcd;   // Binary semaphore to wake up LCD
+    SemaphoreHandle_t mutexI2C; // Mutex to protect I2C line
+};
 
 #endif

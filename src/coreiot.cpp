@@ -113,8 +113,9 @@ void coreiot_task(void *pvParameters){
         client.loop();
 
         // Sample payload, publish to 'v1/devices/me/telemetry'
-        float temp, humi;
-        get_sensor_data(&temp, &humi);
+        float temp = 25.0; 
+        float humi = 60.0;
+        // get_sensor_data(&temp, &humi);
         String payload = "{\"temperature\":" + String(temp) +  ",\"humidity\":" + String(humi) + "}";
         
         client.publish("v1/devices/me/telemetry", payload.c_str());
