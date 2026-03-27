@@ -5,16 +5,49 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/semphr.h"
+#include "freertos/queue.h"
 
-extern float glob_temperature;
-extern float glob_humidity;
+// threhold of temp and humi
+#define TEMP_CRITICAL_COLD      10
+#define TEMP_COOL               18
+#define TEMP_NORMAL 		    30
+#define TEMP_HOT		        35
 
-extern String WIFI_SSID;
-extern String WIFI_PASS;
-extern String CORE_IOT_TOKEN;
-extern String CORE_IOT_SERVER;
-extern String CORE_IOT_PORT;
+#define HUMI_CRITICAL_COLD 	    30
+#define HUMI_COOL 		        40
+#define HUMI_NORMAL 		    60
+#define HUMI_HOT 		        70
 
+// state of LCD display
+#define DEFAULT_STATE       0
+#define CRITICAL_COLD       1
+#define COOL                2
+#define NORMAL              3
+#define HOT                 4
+#define CRITICAL_HOT        5
+
+extern String ssid;
+extern String password;
+extern String wifi_ssid;
+extern String wifi_password;
 extern boolean isWifiConnected;
 extern SemaphoreHandle_t xBinarySemaphoreInternet;
+
+// --- RTOS DATA STRUCTURES ---
+// struct for data transmission across queues
+struct SensorData {
+    float temperature;
+    float humidity;
+    int state;
+};
+
+// struct holding system handles injected into tasks
+struct SystemHandles {
+    QueueHandle_t qLed;         // queue for led_blinky task
+    QueueHandle_t qNeo;         // queue for neo_blinky task
+    QueueHandle_t qLcd;         // queue for temp_humi_lcd_display task
+    SemaphoreHandle_t semLcd;   // binary semaphore to wake up LCD
+    SemaphoreHandle_t mutexI2C; // mutex of I2C bus
+};
+
 #endif
