@@ -25,7 +25,7 @@ static void temp_humi_update_buffer_lcd(char buf[2][17], float temp, float humi,
     snprintf(buf[0], 17, "%s", tempBuf);
 
     // format temp and humi value
-    snprintf(buf[1], 17, "%2.1fC - %2.1f%%", temp, humi);
+    snprintf(buf[1], 17, "T:%2.1fC - H:%2.1f%%", temp, humi);
 }
 
 void temp_humi_monitor(void *pvParameters){
