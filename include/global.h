@@ -7,7 +7,7 @@
 #include "freertos/semphr.h"
 #include "freertos/queue.h"
 
-
+// threhold of temp and humi
 #define TEMP_CRITICAL_COLD      10
 #define TEMP_COOL               18
 #define TEMP_NORMAL 		    30
@@ -18,7 +18,7 @@
 #define HUMI_NORMAL 		    60
 #define HUMI_HOT 		        70
 
-
+// state of LCD display
 #define DEFAULT_STATE       0
 #define CRITICAL_COLD       1
 #define COOL                2
@@ -34,21 +34,20 @@ extern boolean isWifiConnected;
 extern SemaphoreHandle_t xBinarySemaphoreInternet;
 
 // --- RTOS DATA STRUCTURES ---
-
-// Struct for data transmission across queues
+// struct for data transmission across queues
 struct SensorData {
     float temperature;
     float humidity;
     int state;
 };
 
-// Struct holding system handles injected into tasks
+// struct holding system handles injected into tasks
 struct SystemHandles {
-    QueueHandle_t qLed;         // Queue for led_blinky task
-    QueueHandle_t qNeo;         // Queue for neo_blinky task
-    QueueHandle_t qLcd;         // Queue for temp_humi_lcd_display task
-    SemaphoreHandle_t semLcd;   // Binary semaphore to wake up LCD
-    SemaphoreHandle_t mutexI2C; // Mutex to protect I2C line
+    QueueHandle_t qLed;         // queue for led_blinky task
+    QueueHandle_t qNeo;         // queue for neo_blinky task
+    QueueHandle_t qLcd;         // queue for temp_humi_lcd_display task
+    SemaphoreHandle_t semLcd;   // binary semaphore to wake up LCD
+    SemaphoreHandle_t mutexI2C; // mutex of I2C bus
 };
 
 #endif

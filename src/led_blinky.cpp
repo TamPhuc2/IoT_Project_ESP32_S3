@@ -8,22 +8,24 @@ void led_blinky(void *pvParameters){
     pinMode(LED_GPIO, OUTPUT);
   
     while(1){
-        // Non-blocking peek from Queue. 
-        if (xQueuePeek(handles->qLed, &data, 0) == pdTRUE) {
-            currentTemp = data.temperature;
+        // non-blocking peek from queue
+        if(xQueuePeek(handles->qLed, &data, 0) == pdTRUE){
+          // read success
+          currentTemp = data.temperature;
         }
 
         int delay_time = 1000; 
 
+        // set delay time of each state
         // critical cold or critical hot
         if(currentTemp < TEMP_CRITICAL_COLD || currentTemp >= TEMP_HOT){
           delay_time = 100;  
         } 
-        // NORMAL
+        // normal
         else if(currentTemp >= TEMP_COOL && currentTemp < TEMP_NORMAL){
           delay_time = 1000; 
         } 
-        // COOL or HOT
+        // cool or hot
         else{
           delay_time = 500;
         }

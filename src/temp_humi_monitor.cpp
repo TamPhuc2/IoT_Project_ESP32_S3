@@ -2,7 +2,7 @@
 DHT20 dht20;
 LiquidCrystal_I2C lcd(33,16,2);
 
-// Local function to format the LCD buffer purely within this file scope
+// format lcd buffer 
 static void temp_humi_update_buffer_lcd(char buf[2][17], float temp, float humi, int state){
     const char* statusStr = "";
     if (state == CRITICAL_COLD) statusStr = "CRITICAL_COLD";
@@ -11,21 +11,21 @@ static void temp_humi_update_buffer_lcd(char buf[2][17], float temp, float humi,
     else if (state == HOT) statusStr = "HOT";
     else if (state == CRITICAL_HOT) statusStr = "CRITICAL_HOT";
 
-    // Canh giữa (Center-align) trên màn hình 16 cột
+    // center align
     int len = strlen(statusStr);
     int padding = (16 - len) / 2;
     
-    // Khởi tạo mảng trống 16 dấu cách để đè toàn bộ màn hình cũ
+    // clear previous screen
     char tempBuf[17];
     memset(tempBuf, ' ', 16);
     tempBuf[16] = '\0';
     
-    // Copy chữ Tên trạng thái vào vị trí Padding
+    // print statusStr into LCD
     memcpy(tempBuf + padding, statusStr, len);
     snprintf(buf[0], 17, "%s", tempBuf);
 
-    // Format Nhiệt độ & Độ ẩm ở hàng 2
-    snprintf(buf[1], 17, "T:%2.1fC H:%2.1f%%", temp, humi);
+    // format temp and humi value
+    snprintf(buf[1], 17, "%2.1fC - %2.1f%%", temp, humi);
 }
 
 void temp_humi_monitor(void *pvParameters){
@@ -46,50 +46,27 @@ void temp_humi_monitor(void *pvParameters){
     float humidity = dht20.getHumidity();
     xSemaphoreGive(handles->mutexI2C);
 
-    // Priority logic: checks extreme states across BOTH sensors to determine overall LCD Status
-    int currentState = DEFAULT_STATE; // Default to NORMAL
-
-    // // CRITICAL COLD
-    // if (temperature < TEMP_CRITICAL_COLD || humidity < HUMI_CRITICAL_COLD) {
-    //     currentState = CRITICAL_COLD;
-    // }
-    // // COOL
-    // else if ((temperature >= TEMP_CRITICAL_COLD && temperature < TEMP_COOL) || 
-    //          (humidity >= HUMI_CRITICAL_COLD && humidity < HUMI_COOL)) {
-    //     currentState = COOL; 
-    // } 
-    // // CRITICAL HOT
-    // else if (temperature >= TEMP_HOT || humidity >= HUMI_HOT) {
-    //     currentState = CRITICAL_HOT; 
-    // } 
-    // // HOT
-    // else if ((temperature >= TEMP_NORMAL && temperature < TEMP_HOT) || 
-    //          (humidity >= HUMI_NORMAL && humidity < HUMI_HOT)) {
-    //     currentState = HOT; 
-    // }
-    // //NORMAL
-    // else {
-    //     currentState = NORMAL; // NORMAL
-    // }
+    // checks extreme states across BOTH sensors to determine overall LCD Status
+    int currentState = DEFAULT_STATE; 
     // CRITICAL COLD
-    if (temperature < TEMP_CRITICAL_COLD) {
+    if(temperature < TEMP_CRITICAL_COLD){
         currentState = CRITICAL_COLD;
     }
     // COOL
-    else if (temperature >= TEMP_CRITICAL_COLD && temperature < TEMP_COOL) {
+    else if(temperature >= TEMP_CRITICAL_COLD && temperature < TEMP_COOL){
         currentState = COOL; 
     } 
     // CRITICAL HOT
-    else if (temperature >= TEMP_HOT) {
+    else if(temperature >= TEMP_HOT){
         currentState = CRITICAL_HOT; 
     } 
     // HOT
-    else if (temperature >= TEMP_NORMAL && temperature < TEMP_HOT) {
+    else if(temperature >= TEMP_NORMAL && temperature < TEMP_HOT){
         currentState = HOT; 
     }
     //NORMAL
     else {
-        currentState = NORMAL; // NORMAL
+        currentState = NORMAL; 
     }
 
     SensorData freshData = {temperature, humidity, currentState};

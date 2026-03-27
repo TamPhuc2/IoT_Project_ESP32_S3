@@ -18,9 +18,9 @@ void neo_blinky(void *pvParameters){
     int tick_count = 0;
 
     while(1){   
-        // update humi value after 1s / 50 ticks * 20ms               
-        if(tick_count % 50 == 0) {
-            if (xQueuePeek(handles->qNeo, &data, 0) == pdTRUE) {
+        // update humi value after 1s              
+        if(tick_count % TICKS_PER_UPDATE == 0){
+            if(xQueuePeek(handles->qNeo, &data, 0) == pdTRUE){
                 currentHumi = data.humidity;
             }
             
@@ -53,14 +53,16 @@ void neo_blinky(void *pvParameters){
         // Logic blinky rgb led and state
         bool led_on = true;
         
+        // blinky each 200ms - fast
         if(currentHumi < HUMI_CRITICAL_COLD || currentHumi >= HUMI_HOT) {
-            led_on = ((tick_count / 10) % 2 == 0); // blinky each 200ms
+            led_on = ((tick_count / TICKS_BLINK_FAST) % 2 == 0); 
         }
         else if(currentHumi >= HUMI_COOL && currentHumi < HUMI_NORMAL) {
             led_on = true;                         
         }
+        // blinky each 500ms - slow
         else {
-            led_on = ((tick_count / 25) % 2 == 0); // blinky each 500ms
+            led_on = ((tick_count / TICKS_BLINK_SLOW) % 2 == 0);
         }
 
         if(led_on){
@@ -72,6 +74,6 @@ void neo_blinky(void *pvParameters){
         strip.show();
 
         tick_count++;
-        vTaskDelay(pdMS_TO_TICKS(20)); // Delay 20ms for smoothy 50 FPS 
+        vTaskDelay(TASK_PERIOD_MS); // Delay 20ms for smoothy 50 FPS 
     }
 }
