@@ -71,7 +71,7 @@ void temp_humi_monitor(void *pvParameters){
 
     SensorData freshData = {temperature, humidity, currentState};
 
-    // Broadcast data to Queues
+    // share data to queues
     xQueueOverwrite(handles->qLed, &freshData);
     xQueueOverwrite(handles->qNeo, &freshData);
     xQueueOverwrite(handles->qLcd, &freshData);
@@ -94,7 +94,8 @@ void temp_humi_lcd_display(void *pvParameters){
     SensorData data;
     char local_lcd_buffer[2][17] = {"                ", "                "};
 
-    vTaskDelay(pdMS_TO_TICKS(100)); // Delay slightly to ensure Wire.begin() in temp_humi_monitor runs first
+    // delay slightly to ensure Wire.begin() in temp_humi_monitor run first
+    vTaskDelay(100); 
 
     xSemaphoreTake(handles->mutexI2C, portMAX_DELAY);
     lcd.begin();
@@ -102,10 +103,10 @@ void temp_humi_lcd_display(void *pvParameters){
     xSemaphoreGive(handles->mutexI2C);
 
     while(1){
-      // Suspend task until a Semaphore is given (Event-driven paradigm)
+      // suspend task until a semaphore is given 
       xSemaphoreTake(handles->semLcd, portMAX_DELAY);
 
-      // Peek the data from queue (non-blocking) just in case someone else needed it. 
+      // peek the data from queue (non-blocking)
       if (xQueuePeek(handles->qLcd, &data, 0) == pdTRUE) {
           temp_humi_update_buffer_lcd(local_lcd_buffer, data.temperature, data.humidity, data.state);
           

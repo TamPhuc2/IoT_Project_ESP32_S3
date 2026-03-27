@@ -3,7 +3,7 @@
 void neo_blinky(void *pvParameters){
     SystemHandles* handles = (SystemHandles*)pvParameters;
     SensorData data;
-
+    
     Adafruit_NeoPixel strip(LED_COUNT, NEO_PIN, NEO_GRB + NEO_KHZ800);
     strip.begin();
     strip.setBrightness(30); // set brightness 
