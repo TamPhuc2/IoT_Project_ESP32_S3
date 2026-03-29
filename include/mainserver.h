@@ -1,17 +1,20 @@
 #ifndef ___MAIN_SERVER__
 #define ___MAIN_SERVER__
-#include <Arduino.h>
+#include "global.h"
+#include <SPIFFS.h>
 #include <WiFi.h>
 #include <WebServer.h>
-#include <Adafruit_NeoPixel.h>
-#include "global.h"
-
-#define LED1_PIN 48
-#define LED2_PIN 41
-#define BOOT_PIN 0
-String mainPage(bool led1, bool led2, float temp, float humi);
-String settingsPage();
 
 void main_server_task(void *pvParameters);
+
+// Separate non-global handler prototypes
+void handleFile(WebServer& server, const char* path, const char* type);
+void handleSensors(WebServer& server, SystemHandles* handles);
+void handlePower(WebServer& server, SystemHandles* handles);
+void handleLed(WebServer& server, SystemHandles* handles);
+void handleFan(WebServer& server, SystemHandles* handles);
+void handleConnect(WebServer& server);
+void connectToWiFi();
+void startAP();
 
 #endif
