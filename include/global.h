@@ -48,10 +48,18 @@ struct SensorData {
     int state;
 };
 
+#define POWER_PIN 47
+#define LED_PIN 38
+#define FAN_PIN 48
+
+#define LED_1_PIN   0
+#define LED_2_PIN   1
+
 // struct holding device states for Web Server
 struct DeviceStates {
-    bool led1;
-    bool led2;
+    bool powerOn;
+    bool led_1;
+    bool led_2;
 };
 
 // struct holding system handles injected into tasks

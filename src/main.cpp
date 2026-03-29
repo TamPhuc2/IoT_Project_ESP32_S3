@@ -25,8 +25,9 @@ void setup()
   sysHandles.mutexDeviceState = xSemaphoreCreateMutex();
   
   // Initialize device default states
-  sysHandles.deviceState.led1 = false;
-  sysHandles.deviceState.led2 = false;
+  sysHandles.deviceState.powerOn = false;
+  sysHandles.deviceState.led_1 = false;
+  sysHandles.deviceState.led_2 = false;
 
   // Tasks creation - passing the sysHandles pointer to pvParameters
   xTaskCreate(led_blinky, "Task LED Blink", 2048, (void*)&sysHandles, 2, NULL);
