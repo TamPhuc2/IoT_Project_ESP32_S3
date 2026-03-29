@@ -19,9 +19,14 @@ void setup()
   sysHandles.qNeo = xQueueCreate(1, sizeof(SensorData));
   sysHandles.qLcd = xQueueCreate(1, sizeof(SensorData));
 
-  // Initialize Binary Semaphore (for LCD) and Mutex (for I2C)
+  // Initialize Binary Semaphore (for LCD) and Mutex (for I2C and Device States)
   sysHandles.semLcd = xSemaphoreCreateBinary();
   sysHandles.mutexI2C = xSemaphoreCreateMutex();
+  sysHandles.mutexDeviceState = xSemaphoreCreateMutex();
+  
+  // Initialize device default states
+  sysHandles.deviceState.led1 = false;
+  sysHandles.deviceState.led2 = false;
 
   // Tasks creation - passing the sysHandles pointer to pvParameters
   xTaskCreate(led_blinky, "Task LED Blink", 2048, (void*)&sysHandles, 2, NULL);
@@ -29,7 +34,7 @@ void setup()
   xTaskCreate(temp_humi_monitor, "Task TEMP HUMI Monitor", 2048, (void*)&sysHandles, 2, NULL);
   xTaskCreate(temp_humi_lcd_display, "Test LCD", 2048, (void*)&sysHandles, 2, NULL);
   
-  //xTaskCreate(main_server_task, "Task Main Server" ,8192  ,NULL  ,2 , NULL);
+  xTaskCreate(main_server_task, "Task Main Server" ,8192, (void*)&sysHandles, 2, NULL);
   //xTaskCreate( tiny_ml_task, "Tiny ML Task" ,2048  ,NULL  ,2 , NULL);
   // xTaskCreate(coreiot_task, "CoreIOT Task" ,4096  ,NULL  ,2 , NULL);
   // xTaskCreate(Task_Toogle_BOOT, "Task_Toogle_BOOT", 4096, NULL, 2, NULL);
