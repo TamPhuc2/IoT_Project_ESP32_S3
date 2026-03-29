@@ -1,5 +1,21 @@
 #include "mainserver.h"
 
+// Shared static NeoPixel object for web server LED control
+// Declared at file scope so both handleLed_1 and handleLed_2 share the same pixel buffer
+static Adafruit_NeoPixel rgb_4_led(4, 8, NEO_GBR + NEO_KHZ800);
+static bool rgb_4_led_initialized = false;
+
+static void ensureRgbInit() {
+    if (!rgb_4_led_initialized) {
+        rgb_4_led.begin();
+        rgb_4_led.setBrightness(30);
+        rgb_4_led.clear();
+        rgb_4_led.show();
+        rgb_4_led_initialized = true;
+    }
+}
+
+
 // Helper to serve files from SPIFFS
 void handleFile(WebServer& server, const char* path, const char* type) {
     File file = SPIFFS.open(path, "r");
@@ -40,14 +56,18 @@ void handlePower(WebServer& server, SystemHandles* handles) {
 }
 
 // Handler for LED toggle
-void handleLed(WebServer& server, SystemHandles* handles) {
+void handleLed_1(WebServer& server, SystemHandles* handles) {
     if (server.hasArg("state")) {
         String state = server.arg("state");
         bool turnOn = (state == "on");
+
+        ensureRgbInit(); // Dùng shared object, không tạo mới
         
         xSemaphoreTake(handles->mutexDeviceState, portMAX_DELAY);
-        handles->deviceState.ledOn = turnOn;
-        digitalWrite(LED_PIN, turnOn ? HIGH : LOW);
+        handles->deviceState.led_1 = turnOn;
+        // Set pixel LED_1 theo state, pixel LED_2 giữ nguyên (không reset)
+        rgb_4_led.setPixelColor(LED_1_PIN, turnOn ? rgb_4_led.Color(255, 255, 255) : rgb_4_led.Color(0, 0, 0));
+        rgb_4_led.show();
         xSemaphoreGive(handles->mutexDeviceState);
         
         server.send(200, "text/plain", turnOn ? "LED ON" : "LED OFF");
@@ -57,14 +77,18 @@ void handleLed(WebServer& server, SystemHandles* handles) {
 }
 
 // Handler for Fan toggle
-void handleFan(WebServer& server, SystemHandles* handles) {
+void handleLed_2(WebServer& server, SystemHandles* handles) {
     if (server.hasArg("state")) {
         String state = server.arg("state");
         bool turnOn = (state == "on");
-        
+
+        ensureRgbInit(); // Dùng shared object, không tạo mới
+
         xSemaphoreTake(handles->mutexDeviceState, portMAX_DELAY);
-        handles->deviceState.fanOn = turnOn;
-        digitalWrite(FAN_PIN, turnOn ? HIGH : LOW);
+        handles->deviceState.led_2 = turnOn;
+        // Set pixel LED_2 theo state, pixel LED_1 giữ nguyên (không reset)
+        rgb_4_led.setPixelColor(LED_2_PIN, turnOn ? rgb_4_led.Color(255, 255, 255) : rgb_4_led.Color(0, 0, 0));
+        rgb_4_led.show();
         xSemaphoreGive(handles->mutexDeviceState);
         
         server.send(200, "text/plain", turnOn ? "Fan ON" : "Fan OFF");
@@ -90,6 +114,9 @@ void main_server_task(void *pvParameters) {
     // Initialize SPIFFS
     if (!SPIFFS.begin(true)) {
         Serial.println("SPIFFS Mount Failed");
+    }
+    else {
+        Serial.println("Ok roi ku");
     }
 
     // Initialize Pins
@@ -118,8 +145,8 @@ void main_server_task(void *pvParameters) {
 
     server.on("/sensors", HTTP_GET, [&server, handles]() { handleSensors(server, handles); });
     server.on("/power", HTTP_GET, [&server, handles]() { handlePower(server, handles); });
-    server.on("/led", HTTP_GET, [&server, handles]() { handleLed(server, handles); });
-    server.on("/fan", HTTP_GET, [&server, handles]() { handleFan(server, handles); });
+    server.on("/led", HTTP_GET, [&server, handles]() { handleLed_1(server, handles); });
+    server.on("/fan", HTTP_GET, [&server, handles]() { handleLed_2(server, handles); });
 
     startAP();
     server.begin();

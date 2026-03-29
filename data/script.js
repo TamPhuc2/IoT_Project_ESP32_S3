@@ -86,7 +86,7 @@ document.getElementById("btn-power").addEventListener("click", function() {
     });
 });
 
-// Hàm xử lý nút led
+// Hàm xử lý nút led 1
 document.getElementById("btn-led").addEventListener("click", function(){
   let currentText = this.innerText;
   let newState = currentText.includes("Bật") ? "on" : "off";
@@ -98,6 +98,26 @@ document.getElementById("btn-led").addEventListener("click", function(){
         this.innerText = "Tắt Đèn";
       } else {
         this.innerText = "Bật Đèn";
+      }
+    })
+    .catch(error => {
+      console.error("Lỗi khi gửi yêu cầu:", error);
+    });
+});
+
+
+// Hàm xử lý nút fan 1
+document.getElementById("btn-fan").addEventListener("click", function(){
+  let currentText = this.innerText;
+  let newState = currentText.includes("Bật") ? "on" : "off";
+  fetch('/fan?state=' + newState)
+    .then(response => response.text())
+    .then(data => {
+      console.log("ESP32 trả về:", data);
+      if (newState === "on") {
+        this.innerText = "Tắt Quạt";
+      } else {
+        this.innerText = "Bật Quạt";
       }
     })
     .catch(error => {
