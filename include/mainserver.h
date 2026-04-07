@@ -12,9 +12,9 @@ void main_server_task(void *pvParameters);
 
 void handleFile(WebServer& server, const char* path, const char* type);
 void handleSensors(WebServer& server, SystemHandles* handles);
-void handlePower(WebServer& server, SystemHandles* handles);
-void handleLed_1(WebServer& server, SystemHandles* handles);
-void handleLed_2(WebServer& server, SystemHandles* handles);
+void handleLed_1(WebServer& server, SystemHandles* handles, Adafruit_NeoPixel& rgb_4_led);
+void handleLed_2(WebServer& server, SystemHandles* handles, Adafruit_NeoPixel& rgb_4_led);
+void handleAllOff(WebServer& server, SystemHandles* handles, Adafruit_NeoPixel& rgb_4_led);
 void handleConnect(WebServer& server);
 void connectToWiFi();
 void startAP();

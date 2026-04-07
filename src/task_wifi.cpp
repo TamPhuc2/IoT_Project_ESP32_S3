@@ -15,7 +15,8 @@ void startSTA()
         vTaskDelete(NULL);
     }
 
-    WiFi.mode(WIFI_STA);
+    // Use AP_STA to ensure AP remains active while searching for STA
+    WiFi.mode(WIFI_AP_STA);
 
     if (WIFI_PASS.isEmpty())
     {
@@ -26,12 +27,22 @@ void startSTA()
         WiFi.begin(WIFI_SSID.c_str(), WIFI_PASS.c_str());
     }
 
-    while (WiFi.status() != WL_CONNECTED)
+    int retryCount = 0;
+    while (WiFi.status() != WL_CONNECTED && retryCount < 20) // Try for ~10 seconds
     {
-        vTaskDelay(100 / portTICK_PERIOD_MS);
+        vTaskDelay(500 / portTICK_PERIOD_MS);
+        retryCount++;
     }
-    //Give a semaphore here
-    xSemaphoreGive(xBinarySemaphoreInternet);
+
+    if (WiFi.status() == WL_CONNECTED)
+    {
+        xSemaphoreGive(xBinarySemaphoreInternet);
+        Serial.println("STA Connected successfully.");
+    }
+    else
+    {
+        Serial.println("STA Connection failed. Periodic retries will continue.");
+    }
 }
 
 bool Wifi_reconnect()

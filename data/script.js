@@ -66,38 +66,18 @@ function updateSensors() {
 setInterval(updateSensors, 5000);
 updateSensors();
 
-// Hàm xử lý nút nguồn
-document.getElementById("btn-power").addEventListener("click", function() {
-  let currentText = this.innerText;
-  let newState = currentText.includes("Bật") ? "on" : "off";
-
-  fetch('/power?state=' + newState)
-    .then(response => response.text())
-    .then(data => {
-      console.log("ESP32 trả về:", data);
-      if (newState === "on") {
-        this.innerText = "Tắt Nguồn";
-      } else {
-        this.innerText = "Bật Nguồn";
-      }
-    })
-    .catch(error => {
-      console.error("Lỗi khi gửi yêu cầu:", error);
-    });
-});
-
 // Hàm xử lý nút led 1
-document.getElementById("btn-led").addEventListener("click", function(){
+document.getElementById("btn-led1").addEventListener("click", function(){
   let currentText = this.innerText;
   let newState = currentText.includes("Bật") ? "on" : "off";
-  fetch('/led?state=' + newState)
+  fetch('/led1?state=' + newState)
     .then(response => response.text())
     .then(data => {
       console.log("ESP32 trả về:", data);
       if (newState === "on") {
-        this.innerText = "Tắt Đèn";
+        this.innerText = "Tắt LED 1";
       } else {
-        this.innerText = "Bật Đèn";
+        this.innerText = "Bật LED 1";
       }
     })
     .catch(error => {
@@ -105,22 +85,35 @@ document.getElementById("btn-led").addEventListener("click", function(){
     });
 });
 
-
-// Hàm xử lý nút fan 1
-document.getElementById("btn-fan").addEventListener("click", function(){
+// Hàm xử lý nút led 2
+document.getElementById("btn-led2").addEventListener("click", function(){
   let currentText = this.innerText;
   let newState = currentText.includes("Bật") ? "on" : "off";
-  fetch('/fan?state=' + newState)
+  fetch('/led2?state=' + newState)
     .then(response => response.text())
     .then(data => {
       console.log("ESP32 trả về:", data);
       if (newState === "on") {
-        this.innerText = "Tắt Quạt";
+        this.innerText = "Tắt LED 2";
       } else {
-        this.innerText = "Bật Quạt";
+        this.innerText = "Bật LED 2";
       }
     })
     .catch(error => {
       console.error("Lỗi khi gửi yêu cầu:", error);
+    });
+});
+
+// Hàm xử lý nút tắt tất cả
+document.getElementById("btn-off").addEventListener("click", function(){
+  fetch('/all/off')
+    .then(response => response.text())
+    .then(data => {
+      console.log("ESP32 trả về:", data);
+      document.getElementById("btn-led1").innerText = "Bật LED 1";
+      document.getElementById("btn-led2").innerText = "Bật LED 2";
+    })
+    .catch(error => {
+      console.error("Lỗi khi gửi yêu cầu tắt tất cả:", error);
     });
 });

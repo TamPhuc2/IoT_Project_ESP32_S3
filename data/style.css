@@ -1,6 +1,6 @@
 body {
   font-family: "Segoe UI", Arial, sans-serif;
-  background: #f2f3f5;
+  background: #93b3f2;
   margin: 0;
   padding: 20px;
 }
@@ -134,19 +134,7 @@ button:hover {
 }
 
 
-/* Nút nguồn */
-.btn-power {
-  background: #00ffcc;
-  color: #000;
-  font-weight: bold;
-  float: right;
-  width: 120px;   
-  text-align: center; 
-}
-.btn-power:hover {
-  background: #00e0b0;
-  transform: scale(1.05);
-}
+
 
 /* Nút đèn */
 .btn-led {

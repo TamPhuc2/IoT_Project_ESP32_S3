@@ -25,7 +25,6 @@ void setup()
   sysHandles.mutexDeviceState = xSemaphoreCreateMutex();
   
   // Initialize device default states
-  sysHandles.deviceState.powerOn = false;
   sysHandles.deviceState.led_1 = false;
   sysHandles.deviceState.led_2 = false;
 

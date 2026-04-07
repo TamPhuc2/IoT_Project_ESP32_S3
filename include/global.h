@@ -48,7 +48,6 @@ struct SensorData {
     int state;
 };
 
-#define POWER_PIN 47
 #define LED_PIN 38
 #define FAN_PIN 48
 
@@ -57,7 +56,6 @@ struct SensorData {
 
 // struct holding device states for Web Server
 struct DeviceStates {
-    bool powerOn;
     bool led_1;
     bool led_2;
 };
