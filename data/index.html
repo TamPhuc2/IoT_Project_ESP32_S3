@@ -6,13 +6,16 @@
 
   <!-- Liên kết CSS -->
   <link rel="stylesheet" href="style.css">
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- //<script src="https://cdn.jsdelivr.net/npm/chart.js"></script> -->
 </head>
 
 <body>
-  <h1>
+  <!-- <h1>
     Dashboard Cảm Biến IoT trên YOLO_UNO
-  </h1>
+  </h1> -->
+  <div class="page-title">
+    Dashboard Cảm Biến IoT trên YOLO_UNO
+  </div>
   <div class="top-bar">
     <div class="left-text">Giám sát và điều khiển thiết bị theo thời gian thực</div>
     <div class="right-text">
@@ -31,7 +34,7 @@
         <span id="temp">--</span>
       </div>
       </div>
-      <p class="change up">↑ +0.5 &deg;C từ giờ trước</p>
+      <div id="tempChange"></div>
     </div>
 
     <div class="card humidity">
@@ -44,27 +47,29 @@
         <span id="hum">--</span>
       </div>
       </div> 
-      <p class="change up">↑ +0.5 % từ giờ trước</p>
+      <div id="humChange"></div>
     </div>
 
 <div class="card control">
       <div class="header">
         <h1>Bảng điều khiển chính</h1>
       </div>
+
       <div class="control-row">
       <h2>
         <img src="icon\lamp.png" alt="Icon" style="width:24px; vertical-align:middle; margin-right:8px;">
-        LED 1
+        Đèn 1 
       </h2>
-      <button id="btn-led1" class="btn-led">Bật LED 1</button>
+      <button id="btn-led1" class="btn-led1">Bật Đèn</button>
       </div>
       <div class="control-row">
       <h2>
         <img src="icon\lamp.png" alt="Icon" style="width:24px; vertical-align:middle; margin-right:8px;">
-        LED 2
+        Đèn 2 
       </h2>
-      <button id="btn-led2" class="btn-fan">Bật LED 2</button>
+      <button id="btn-led2" class="btn-led2">Bật Đèn</button>
       </div>
+
       <h2>  
         <div class="control-center">
           <button id="btn-refresh" class="btn-refresh">Làm Mới Dữ Liệu</button>
@@ -90,8 +95,8 @@
 </div>
     
   <!-- Chart.js -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
+  <!-- <script src="https://cdn.jsdelivr.net/npm/chart.js"></script> -->
+  <script src="chart.js"></script>
   <!-- JS của bạn -->
   <script src="script.js"></script>
 </body>

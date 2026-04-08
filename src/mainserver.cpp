@@ -15,7 +15,6 @@ void handleFile(WebServer& server, const char* path, const char* type) {
 void handleSensors(WebServer& server, SystemHandles* handles) {
     SensorData d = {0, 0, 0};
     
-    // Sử dụng Queue (Zero-Global) để lấy dữ liệu cảm biến
     if (handles->qLcd != NULL) {
         xQueuePeek(handles->qLcd, &d, 0);
     }
@@ -29,14 +28,10 @@ void handleLed_1(WebServer& server, SystemHandles* handles, Adafruit_NeoPixel& r
         String state = server.arg("state");
         bool turnOn = (state == "on");
         
-        // Cần bảo vệ `handles->deviceState` vì có nhiều tác vụ có thể truy cập state cùng một lúc.
-        // Sử dụng Mutex để bảo vệ quyền truy cập vào Struct dữ liệu khi có nhiều Task cùng đọc/ghi.
         xSemaphoreTake(handles->mutexDeviceState, portMAX_DELAY);
-        
         handles->deviceState.led_1 = turnOn;
         rgb_4_led.setPixelColor(LED_1_PIN, turnOn ? rgb_4_led.Color(255, 255, 255) : rgb_4_led.Color(0, 0, 0));
         rgb_4_led.show();
-        
         xSemaphoreGive(handles->mutexDeviceState);
         
         server.send(200, "text/plain", turnOn ? "LED 1 ON" : "LED 1 OFF");
@@ -51,13 +46,10 @@ void handleLed_2(WebServer& server, SystemHandles* handles, Adafruit_NeoPixel& r
         String state = server.arg("state");
         bool turnOn = (state == "on");
 
-        // Sử dụng Mutex để bảo vệ quyền truy cập vào Struct dữ liệu khi có nhiều Task cùng đọc/ghi.
         xSemaphoreTake(handles->mutexDeviceState, portMAX_DELAY);
-        
         handles->deviceState.led_2 = turnOn;
         rgb_4_led.setPixelColor(LED_2_PIN, turnOn ? rgb_4_led.Color(255, 255, 255) : rgb_4_led.Color(0, 0, 0));
         rgb_4_led.show();
-        
         xSemaphoreGive(handles->mutexDeviceState);
         
         server.send(200, "text/plain", turnOn ? "LED 2 ON" : "LED 2 OFF");
@@ -68,7 +60,7 @@ void handleLed_2(WebServer& server, SystemHandles* handles, Adafruit_NeoPixel& r
 
 // Handler to turn off everything (Zero-Global, Mutex protected)
 void handleAllOff(WebServer& server, SystemHandles* handles, Adafruit_NeoPixel& rgb_4_led) {
-    // Sử dụng Mutex để tắt an toàn nhiều thiết bị, khóa mọi sự truy cập nội bộ khác cho đến khi xong.
+    // Use Mutex to turn off all device safety
     xSemaphoreTake(handles->mutexDeviceState, portMAX_DELAY);
     
     handles->deviceState.led_1 = false;
@@ -88,7 +80,7 @@ void handleConnect(WebServer& server) {
 
 // Start AP (Dual Mode Compliance)
 void startAP() {
-    // Fail-safe Network Manager: Thiết lập chế độ Dual Mode (AP + STA)
+    // Fail-safe Network Manager:  Dual Mode (AP + STA)
     WiFi.mode(WIFI_AP_STA);
     WiFi.softAP(ssid.c_str(), password.c_str());
     Serial.println("ESP32 Started in AP+STA Mode.");
@@ -105,7 +97,7 @@ void main_server_task(void *pvParameters) {
     pinMode(FAN_PIN, OUTPUT);
     pinMode(0, INPUT_PULLUP);
 
-    // ZERO-GLOBAL: Object NeoPixel được khởi tạo toàn cục bên trong Task và truyền xuống bằng tham chiếu (reference).
+    // Init NeoPixel local
     Adafruit_NeoPixel rgb_4_led(4, 8, NEO_GBR + NEO_KHZ800);
     rgb_4_led.begin();
     rgb_4_led.setBrightness(30);
@@ -115,10 +107,11 @@ void main_server_task(void *pvParameters) {
     // Local WebServer instance
     WebServer server(80);
 
-    // Khởi tạo các Route tĩnh
+    // Init status route
     server.on("/", [&server]() { handleFile(server, "/index.html", "text/html"); });
     server.on("/style.css", [&server]() { handleFile(server, "/style.css", "text/css"); });
     server.on("/script.js", [&server]() { handleFile(server, "/script.js", "application/javascript"); });
+    server.on("/chart.js", [&server]() { handleFile(server, "/chart.js", "application/javascript"); });
     
     // Serve Icon Files
     server.onNotFound([&server]() {
@@ -130,7 +123,7 @@ void main_server_task(void *pvParameters) {
         }
     });
 
-    // Zero-Global Handlers, truyền cả Server, Handles, và tham chiếu NeoPixel
+    // Zero-Global Handlers - reference to NeoPixel
     server.on("/sensors", HTTP_GET, [&server, handles]() { handleSensors(server, handles); });
     server.on("/led1", HTTP_GET, [&server, handles, &rgb_4_led]() { handleLed_1(server, handles, rgb_4_led); });
     server.on("/led2", HTTP_GET, [&server, handles, &rgb_4_led]() { handleLed_2(server, handles, rgb_4_led); });
@@ -139,11 +132,11 @@ void main_server_task(void *pvParameters) {
     startAP();
     server.begin();
 
-    // Vòng lặp Main Server hoạt động theo kiểu Non-blocking đối với luồng hệ thống RTOS
+    // Non-blovking loop main server
     while (1) {
         server.handleClient();
         
-        // BOOT Button để ép lại AP mode khi cần
+        // BOOT Button to force AP mode
         if (digitalRead(0) == LOW) {
             vTaskDelay(pdMS_TO_TICKS(100));
             if (digitalRead(0) == LOW) {
