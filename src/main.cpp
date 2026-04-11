@@ -30,6 +30,18 @@ void setup()
   sysHandles.deviceState.led_1 = false;
   sysHandles.deviceState.led_2 = false;
 
+  // Initialize Zero-Global credentials Default
+  sysHandles.sysData.wifi_ssid = "tp";
+  sysHandles.sysData.wifi_pass = "tamphuc12345"; // Requirement
+  sysHandles.sysData.coreiot_server = "app.coreiot.io";
+  sysHandles.sysData.coreiot_port = "1883"; // Note: HTTP will just use the server root, port 1883 might not be needed for HTTP
+  sysHandles.sysData.coreiot_token = "ohvefr8ygpajb7f9fr9n";
+  sysHandles.sysData.ap_ssid = "TP NETWOK";
+  sysHandles.sysData.ap_pass = "12345678";
+
+  // Init Event-Driven WiFi (Zero-blocking)
+  init_wifi(&sysHandles);
+
   // Tasks creation - passing the sysHandles pointer to pvParameters
   xTaskCreate(led_blinky, "Task LED Blink", 2048, (void*)&sysHandles, 2, NULL);
   xTaskCreate(neo_blinky, "Task NEO Blink", 2048, (void*)&sysHandles, 2, NULL);
@@ -38,9 +50,9 @@ void setup()
   
   xTaskCreate(main_server_task, "Task Main Server" ,8192, (void*)&sysHandles, 2, NULL);
   
-  // Start WiFi and CoreIOT background tasks
-  xTaskCreate(wifi_task, "WiFi Connection Task", 4096, (void*)&sysHandles, 2, NULL);
-  xTaskCreate(coreiot_task, "CoreIOT MQTT Task", 8192, (void*)&sysHandles, 2, NULL);
+  // Start CoreIOT background REST API task
+  // wifi_task removed as it is now event driven on CPU0
+  xTaskCreate(coreiot_task, "CoreIOT HTTP Task", 8192, (void*)&sysHandles, 2, NULL);
   
   //xTaskCreate( tiny_ml_task, "Tiny ML Task" ,2048  ,NULL  ,2 , NULL);
   // xTaskCreate(Task_Toogle_BOOT, "Task_Toogle_BOOT", 4096, NULL, 2, NULL);

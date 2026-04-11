@@ -3,11 +3,7 @@
 
 #include <WiFi.h>
 #include "global.h"
-#include <task_check_info.h>
-#include <task_webserver.h>
 
-extern bool Wifi_reconnect();
-extern void startAP();
-void wifi_task(void *pvParameters);
+void init_wifi(SystemHandles* handles);
 
 #endif

@@ -26,19 +26,15 @@
 #define HOT                 4
 #define CRITICAL_HOT        5
 
-extern String ssid;
-extern String password;
-extern String wifi_ssid;
-extern String wifi_password;
-extern boolean isWifiConnected;
-extern SemaphoreHandle_t xBinarySemaphoreInternet;
-
-
-extern String WIFI_SSID;
-extern String WIFI_PASS;
-extern String CORE_IOT_TOKEN;
-extern String CORE_IOT_SERVER;
-extern String CORE_IOT_PORT;
+struct SystemData {
+    String wifi_ssid;
+    String wifi_pass;
+    String coreiot_server;
+    String coreiot_port;
+    String coreiot_token;
+    String ap_ssid;
+    String ap_pass;
+};
 
 // --- RTOS DATA STRUCTURES ---
 // struct for data transmission across queues
@@ -70,6 +66,7 @@ struct SystemHandles {
     SemaphoreHandle_t mutexDeviceState; // mutex for DeviceStates
     DeviceStates deviceState;   // device states protected by mutex
     SemaphoreHandle_t mutexConfig; // mutex for Config values
+    SystemData sysData;         // Zero-Global network configurations
 };
 
 #endif

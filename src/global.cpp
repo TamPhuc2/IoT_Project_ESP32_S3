@@ -1,15 +1,5 @@
 #include "global.h"
 
-String WIFI_SSID;
-String WIFI_PASS;
-String CORE_IOT_TOKEN = "ohvefr8ygpajb7f9fr9n";
-String CORE_IOT_SERVER = "app.coreiot.io"; 
-String CORE_IOT_PORT = "1883";
-
-String ssid = "TP NETWOK";
-String password = "12345678";
-String wifi_ssid = "tp";
-String wifi_password = "tamphuc123";
-boolean isWifiConnected = false;
-
-SemaphoreHandle_t xBinarySemaphoreInternet = xSemaphoreCreateBinary();
+// The only global needed for passing signals maybe, or nothing if handled by tasks/events
+// But since xBinarySemaphoreInternet is used in legacy code (if any), I'll keep it or remove it entirely.
+// I will actually remove xBinarySemaphoreInternet since we use WiFiEvents directly now and there is no while loop polling it!

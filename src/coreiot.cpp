@@ -1,42 +1,10 @@
 #include "coreiot.h"
 
-// ----------- CONFIGURE THESE! -----------
-const char* coreIOT_Server = "10.235.76.226";  
-const char* coreIOT_Token = "ohvefr8ygpajb7f9fr9n";   // Device Access Token
-const int   mqttPort = 1883;
-// ----------------------------------------
-
 WiFiClient espClient;
 PubSubClient client(espClient);
 
-
-void reconnect() {
-  // Loop until we're reconnected
-  while (!client.connected()) {
-    Serial.print("Attempting MQTT connection...");
-    // Attempt to connect (username=token, password=empty)
-    //if (client.connect("ESP32Client", coreIOT_Token, NULL)) {
-    String clientId = "ESP32Client-";
-    clientId += String(random(0xffff), HEX);
-
-    if (client.connect(clientId.c_str())) {
-        
-      Serial.println("connected to CoreIOT Server!");
-      client.subscribe("v1/devices/me/rpc/request/+");
-      Serial.println("Subscribed to v1/devices/me/rpc/request/+");
-
-    } else {
-      Serial.print("failed, rc=");
-      Serial.print(client.state());
-      Serial.println(" try again in 5 seconds");
-      delay(5000);
-    }
-  }
-}
-
-
 void callback(char* topic, byte* payload, unsigned int length) {
-  Serial.print("Message arrived [");
+  Serial.print("[CoreIOT] Message arrived [");
   Serial.print(topic);
   Serial.println("] ");
 
@@ -44,7 +12,7 @@ void callback(char* topic, byte* payload, unsigned int length) {
   char message[length + 1];
   memcpy(message, payload, length);
   message[length] = '\0';
-  Serial.print("Payload: ");
+  Serial.print("[CoreIOT] Payload: ");
   Serial.println(message);
 
   // Parse JSON
@@ -64,102 +32,99 @@ void callback(char* topic, byte* payload, unsigned int length) {
     const char* params = doc["params"];
 
     if (strcmp(params, "ON") == 0) {
-      Serial.println("Device turned ON.");
+      Serial.println("[CoreIOT] Device turned ON via RPC.");
       //TODO
 
     } else {   
-      Serial.println("Device turned OFF.");
+      Serial.println("[CoreIOT] Device turned OFF via RPC.");
       //TODO
 
     }
   } else {
-    Serial.print("Unknown method: ");
+    Serial.print("[CoreIOT] Unknown method: ");
     Serial.println(method);
   }
 }
 
-
-void setup_coreiot(){
-
-  //Serial.print("Connecting to WiFi...");
-  //WiFi.begin(wifi_ssid, wifi_password);
-  //while (WiFi.status() != WL_CONNECTED) {
-  
-  // while (isWifiConnected == false) {
-  //   delay(500);
-  //   Serial.print(".");
-  // }
-
-  while(1){
-    if (xSemaphoreTake(xBinarySemaphoreInternet, portMAX_DELAY)) {
-      break;
-    }
-    delay(500);
-    Serial.print(".");
-  }
-
-
-  Serial.println(" Connected!");
-
-  client.setServer(CORE_IOT_SERVER.c_str(), CORE_IOT_PORT.toInt());
-  client.setCallback(callback);
-
-}
-
 void coreiot_task(void *pvParameters){
     SystemHandles* sysHandles = (SystemHandles*)pvParameters;
-    setup_coreiot();
+    
+    // Set callback initially
+    client.setCallback(callback);
 
-    String currentServer = CORE_IOT_SERVER;
-    int currentPort = CORE_IOT_PORT.toInt();
-    String currentToken = CORE_IOT_TOKEN;
+    String currentServer = "";
+    int currentPort = 0;
+    String currentToken = "";
 
     while(1){
-        // Read dynamic config safely
-        xSemaphoreTake(sysHandles->mutexConfig, portMAX_DELAY);
-        String safeServer = CORE_IOT_SERVER;
-        int safePort = CORE_IOT_PORT.toInt();
-        String safeToken = CORE_IOT_TOKEN;
-        xSemaphoreGive(sysHandles->mutexConfig);
-        
-        // Update MQTT Target if it changed
-        if (safeServer != currentServer || safePort != currentPort) {
-             client.disconnect();
-             client.setServer(safeServer.c_str(), safePort);
-             currentServer = safeServer;
-             currentPort = safePort;
-        }
-        currentToken = safeToken;
-
-        if (!client.connected()) {
-            Serial.print("Attempting MQTT connection to ");
-            Serial.print(currentServer);
-            Serial.println("...");
-            String clientId = "ESP32Client-";
-            clientId += String(random(0xffff), HEX);
+        // Only attempt communication if WiFi is actually connected
+        if (WiFi.status() == WL_CONNECTED) {
             
-            // Connect with Token
-            if (client.connect(clientId.c_str(), currentToken.c_str(), NULL)) {
-                Serial.println("connected to CoreIOT Server!");
-                client.subscribe("v1/devices/me/rpc/request/+");
-            } else {
-                Serial.print("failed, rc=");
-                Serial.print(client.state());
-                Serial.println(" try again later");
+            // Read dynamic config safely - Zero Global Protocol
+            xSemaphoreTake(sysHandles->mutexConfig, portMAX_DELAY);
+            String safeServer = sysHandles->sysData.coreiot_server;
+            int safePort = sysHandles->sysData.coreiot_port.toInt();
+            String safeToken = sysHandles->sysData.coreiot_token;
+            xSemaphoreGive(sysHandles->mutexConfig);
+            
+            // Re-setup server target if the config changed (from the UI)
+            if (safeServer != currentServer || safePort != currentPort) {
+                 client.disconnect();
+                 currentServer = safeServer;
+                 currentPort = safePort;
+                 client.setServer(currentServer.c_str(), currentPort);
+            }
+            currentToken = safeToken;
+
+            // Maintain MQTT connection
+            if (!client.connected() && !safeServer.isEmpty() && !safeToken.isEmpty()) {
+                Serial.print("[CoreIOT] Attempting MQTT connection to ");
+                Serial.print(currentServer);
+                Serial.println("...");
+                String clientId = "ESP32Client-";
+                clientId += String(random(0xffff), HEX);
+                
+                // Connect with Token as Username for CoreIOT
+                if (client.connect(clientId.c_str(), currentToken.c_str(), NULL)) {
+                    Serial.println("[CoreIOT] connected to CoreIOT Server!");
+                    client.subscribe("v1/devices/me/rpc/request/+");
+                } else {
+                    Serial.print("[CoreIOT] failed, rc=");
+                    Serial.print(client.state());
+                    Serial.println(" try again later");
+                }
+            }
+            
+            // Keep MQTT session alive and process incoming RPC
+            client.loop(); 
+
+            // Payload generation and transmission
+            if (client.connected()) {
+                // Peek latest queue data safely
+                float temp = 0.0; 
+                float humi = 0.0;
+                SensorData d = {0, 0, 0};
+                
+                if (sysHandles->qLcd != NULL) {
+                    if (xQueuePeek(sysHandles->qLcd, &d, 0) == pdTRUE) {
+                        temp = d.temperature;
+                        humi = d.humidity;
+                    }
+                }
+
+                String payload = "{\"temperature\":" + String(temp, 1) +  ",\"humidity\":" + String(humi, 1) + "}";
+                
+                client.publish("v1/devices/me/telemetry", payload.c_str());
+                Serial.print("[CoreIOT] Published payload: ");
+                Serial.println(payload);
+            }
+        } else {
+            // Mất mạng nội hạt, ngắt kết nối PubSub
+            if (client.connected()) {
+                client.disconnect();
             }
         }
-        client.loop();
 
-        // Sample payload, publish to 'v1/devices/me/telemetry'
-        float temp = 25.0; 
-        float humi = 60.0;
-        // get_sensor_data(&temp, &humi);
-        String payload = "{\"temperature\":" + String(temp) +  ",\"humidity\":" + String(humi) + "}";
-        
-        if (client.connected()) {
-            client.publish("v1/devices/me/telemetry", payload.c_str());
-            Serial.println("Published payload: " + payload);
-        }
-        vTaskDelay(10000 / portTICK_PERIOD_MS);  // Publish every 10 seconds (RTOS delay)
+        vTaskDelay(10000 / portTICK_PERIOD_MS);  // Publish every 10 seconds
     }
 }

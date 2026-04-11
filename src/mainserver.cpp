@@ -76,30 +76,22 @@ void handleAllOff(WebServer& server, SystemHandles* handles, Adafruit_NeoPixel& 
 // Handle dynamic config from test.html
 void handleConnect(WebServer& server, SystemHandles* handles) {
     if (server.hasArg("ssid") && server.hasArg("pass") && server.hasArg("token")) {
-        // Safe global update using mutex
+        // Safe Zero-Global update using mutex
         xSemaphoreTake(handles->mutexConfig, portMAX_DELAY);
-        wifi_ssid = server.arg("ssid");
-        wifi_password = server.arg("pass");
-        CORE_IOT_SERVER = server.arg("server");
-        CORE_IOT_PORT = server.arg("port");
-        CORE_IOT_TOKEN = server.arg("token");
+        handles->sysData.wifi_ssid = server.arg("ssid");
+        handles->sysData.wifi_pass = server.arg("pass");
+        handles->sysData.coreiot_server = server.arg("server");
+        handles->sysData.coreiot_port = server.arg("port");
+        handles->sysData.coreiot_token = server.arg("token");
         xSemaphoreGive(handles->mutexConfig);
         
         server.send(200, "text/plain", "Cấu hình thành công! ESP32 đang khởi động lại kết nối...");
         
-        // Disconnect forces STA task to retry with new credentials
+        // Disconnect forces STA task (via WiFiEvent) to retry with new credentials
         WiFi.disconnect();
     } else {
         server.send(400, "text/plain", "Thiếu tham số bắt buộc");
     }
-}
-
-// Start AP (Dual Mode Compliance)
-void startAP() {
-    // Fail-safe Network Manager:  Dual Mode (AP + STA)
-    WiFi.mode(WIFI_AP_STA);
-    WiFi.softAP(ssid.c_str(), password.c_str());
-    Serial.println("ESP32 Started in AP+STA Mode.");
 }
 
 void main_server_task(void *pvParameters) {
@@ -148,19 +140,17 @@ void main_server_task(void *pvParameters) {
     server.on("/led1", HTTP_GET, [&server, handles, &rgb_4_led]() { handleLed_1(server, handles, rgb_4_led); });
     server.on("/led2", HTTP_GET, [&server, handles, &rgb_4_led]() { handleLed_2(server, handles, rgb_4_led); });
     server.on("/all/off", HTTP_GET, [&server, handles, &rgb_4_led]() { handleAllOff(server, handles, rgb_4_led); });
-
-    startAP();
     server.begin();
 
     // Non-blovking loop main server
     while (1) {
         server.handleClient();
-        
-        // BOOT Button to force AP mode
+        // BOOT Button to force AP mode reset or other logic
+        // Disabled startAP here since it is managed by init_wifi Event
         if (digitalRead(0) == LOW) {
             vTaskDelay(pdMS_TO_TICKS(100));
             if (digitalRead(0) == LOW) {
-                startAP();
+                // Serial.println("Boot button pressed");
             }
         }
         
