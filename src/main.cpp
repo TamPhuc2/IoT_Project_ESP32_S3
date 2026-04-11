@@ -6,6 +6,7 @@
 #include "mainserver.h"
 #include "tinyml.h"
 #include "coreiot.h"
+#include "task_wifi.h"
 
 // Static instance holding our system handles (to be passed as a void* to tasks)
 static SystemHandles sysHandles;
@@ -23,6 +24,7 @@ void setup()
   sysHandles.semLcd = xSemaphoreCreateBinary();
   sysHandles.mutexI2C = xSemaphoreCreateMutex();
   sysHandles.mutexDeviceState = xSemaphoreCreateMutex();
+  sysHandles.mutexConfig = xSemaphoreCreateMutex();
   
   // Initialize device default states
   sysHandles.deviceState.led_1 = false;
@@ -35,8 +37,12 @@ void setup()
   xTaskCreate(temp_humi_lcd_display, "Test LCD", 2048, (void*)&sysHandles, 2, NULL);
   
   xTaskCreate(main_server_task, "Task Main Server" ,8192, (void*)&sysHandles, 2, NULL);
+  
+  // Start WiFi and CoreIOT background tasks
+  xTaskCreate(wifi_task, "WiFi Connection Task", 4096, (void*)&sysHandles, 2, NULL);
+  xTaskCreate(coreiot_task, "CoreIOT MQTT Task", 8192, (void*)&sysHandles, 2, NULL);
+  
   //xTaskCreate( tiny_ml_task, "Tiny ML Task" ,2048  ,NULL  ,2 , NULL);
-  // xTaskCreate(coreiot_task, "CoreIOT Task" ,4096  ,NULL  ,2 , NULL);
   // xTaskCreate(Task_Toogle_BOOT, "Task_Toogle_BOOT", 4096, NULL, 2, NULL);
 }
 

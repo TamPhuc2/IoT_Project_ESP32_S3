@@ -69,6 +69,7 @@ struct SystemHandles {
     SemaphoreHandle_t mutexI2C; // mutex of I2C bus
     SemaphoreHandle_t mutexDeviceState; // mutex for DeviceStates
     DeviceStates deviceState;   // device states protected by mutex
+    SemaphoreHandle_t mutexConfig; // mutex for Config values
 };
 
 #endif

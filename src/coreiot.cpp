@@ -2,7 +2,7 @@
 
 // ----------- CONFIGURE THESE! -----------
 const char* coreIOT_Server = "10.235.76.226";  
-const char* coreIOT_Token = "g7drm1amhd3dchr379xu";   // Device Access Token
+const char* coreIOT_Token = "ohvefr8ygpajb7f9fr9n";   // Device Access Token
 const int   mqttPort = 1883;
 // ----------------------------------------
 
@@ -107,13 +107,46 @@ void setup_coreiot(){
 }
 
 void coreiot_task(void *pvParameters){
-
+    SystemHandles* sysHandles = (SystemHandles*)pvParameters;
     setup_coreiot();
 
+    String currentServer = CORE_IOT_SERVER;
+    int currentPort = CORE_IOT_PORT.toInt();
+    String currentToken = CORE_IOT_TOKEN;
+
     while(1){
+        // Read dynamic config safely
+        xSemaphoreTake(sysHandles->mutexConfig, portMAX_DELAY);
+        String safeServer = CORE_IOT_SERVER;
+        int safePort = CORE_IOT_PORT.toInt();
+        String safeToken = CORE_IOT_TOKEN;
+        xSemaphoreGive(sysHandles->mutexConfig);
+        
+        // Update MQTT Target if it changed
+        if (safeServer != currentServer || safePort != currentPort) {
+             client.disconnect();
+             client.setServer(safeServer.c_str(), safePort);
+             currentServer = safeServer;
+             currentPort = safePort;
+        }
+        currentToken = safeToken;
 
         if (!client.connected()) {
-            reconnect();
+            Serial.print("Attempting MQTT connection to ");
+            Serial.print(currentServer);
+            Serial.println("...");
+            String clientId = "ESP32Client-";
+            clientId += String(random(0xffff), HEX);
+            
+            // Connect with Token
+            if (client.connect(clientId.c_str(), currentToken.c_str(), NULL)) {
+                Serial.println("connected to CoreIOT Server!");
+                client.subscribe("v1/devices/me/rpc/request/+");
+            } else {
+                Serial.print("failed, rc=");
+                Serial.print(client.state());
+                Serial.println(" try again later");
+            }
         }
         client.loop();
 
@@ -123,11 +156,10 @@ void coreiot_task(void *pvParameters){
         // get_sensor_data(&temp, &humi);
         String payload = "{\"temperature\":" + String(temp) +  ",\"humidity\":" + String(humi) + "}";
         
-        client.publish("v1/devices/me/telemetry", payload.c_str());
-
-
-        
-        Serial.println("Published payload: " + payload);
-        vTaskDelay(10000);  // Publish every 10 seconds
+        if (client.connected()) {
+            client.publish("v1/devices/me/telemetry", payload.c_str());
+            Serial.println("Published payload: " + payload);
+        }
+        vTaskDelay(10000 / portTICK_PERIOD_MS);  // Publish every 10 seconds (RTOS delay)
     }
 }

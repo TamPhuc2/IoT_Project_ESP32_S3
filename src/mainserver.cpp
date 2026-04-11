@@ -73,9 +73,25 @@ void handleAllOff(WebServer& server, SystemHandles* handles, Adafruit_NeoPixel& 
     server.send(200, "text/plain", "All devices OFF");
 }
 
-// Placeholder for WiFi connection
-void handleConnect(WebServer& server) {
-    server.send(200, "text/plain", "Connecting...");
+// Handle dynamic config from test.html
+void handleConnect(WebServer& server, SystemHandles* handles) {
+    if (server.hasArg("ssid") && server.hasArg("pass") && server.hasArg("token")) {
+        // Safe global update using mutex
+        xSemaphoreTake(handles->mutexConfig, portMAX_DELAY);
+        wifi_ssid = server.arg("ssid");
+        wifi_password = server.arg("pass");
+        CORE_IOT_SERVER = server.arg("server");
+        CORE_IOT_PORT = server.arg("port");
+        CORE_IOT_TOKEN = server.arg("token");
+        xSemaphoreGive(handles->mutexConfig);
+        
+        server.send(200, "text/plain", "Cấu hình thành công! ESP32 đang khởi động lại kết nối...");
+        
+        // Disconnect forces STA task to retry with new credentials
+        WiFi.disconnect();
+    } else {
+        server.send(400, "text/plain", "Thiếu tham số bắt buộc");
+    }
 }
 
 // Start AP (Dual Mode Compliance)
@@ -112,6 +128,10 @@ void main_server_task(void *pvParameters) {
     server.on("/style.css", [&server]() { handleFile(server, "/style.css", "text/css"); });
     server.on("/script.js", [&server]() { handleFile(server, "/script.js", "application/javascript"); });
     server.on("/chart.js", [&server]() { handleFile(server, "/chart.js", "application/javascript"); });
+    
+    // Dynamic config route
+    server.on("/test.html", [&server]() { handleFile(server, "/test.html", "text/html"); });
+    server.on("/connect", HTTP_GET, [&server, handles]() { handleConnect(server, handles); });
     
     // Serve Icon Files
     server.onNotFound([&server]() {
