@@ -33,6 +33,8 @@ void setup()
   // Initialize Zero-Global credentials Default
   sysHandles.sysData.wifi_ssid = "tp";
   sysHandles.sysData.wifi_pass = "tamphuc12345"; // Requirement
+  sysHandles.sysData.fallback_ssid = "";
+  sysHandles.sysData.fallback_pass = "";
   sysHandles.sysData.coreiot_server = "app.coreiot.io";
   sysHandles.sysData.coreiot_port = "1883"; // Note: HTTP will just use the server root, port 1883 might not be needed for HTTP
   sysHandles.sysData.coreiot_token = "ohvefr8ygpajb7f9fr9n";

@@ -78,6 +78,11 @@ void handleConnect(WebServer& server, SystemHandles* handles) {
     if (server.hasArg("ssid") && server.hasArg("pass") && server.hasArg("token")) {
         // Safe Zero-Global update using mutex
         xSemaphoreTake(handles->mutexConfig, portMAX_DELAY);
+        
+        // Lưu lại cấu hình cũ phòng trường hợp mất mạng
+        handles->sysData.fallback_ssid = handles->sysData.wifi_ssid;
+        handles->sysData.fallback_pass = handles->sysData.wifi_pass;
+
         handles->sysData.wifi_ssid = server.arg("ssid");
         handles->sysData.wifi_pass = server.arg("pass");
         handles->sysData.coreiot_server = server.arg("server");
@@ -142,15 +147,38 @@ void main_server_task(void *pvParameters) {
     server.on("/all/off", HTTP_GET, [&server, handles, &rgb_4_led]() { handleAllOff(server, handles, rgb_4_led); });
     server.begin();
 
-    // Non-blovking loop main server
+    // Variables for hardware-state tracking
+    bool last_led_1 = false;
+    bool last_led_2 = false;
+
+    // Non-blocking loop main server
     while (1) {
         server.handleClient();
-        // BOOT Button to force AP mode reset or other logic
-        // Disabled startAP here since it is managed by init_wifi Event
+        
+        // Zero-Global Hardware Polling
+        xSemaphoreTake(handles->mutexDeviceState, portMAX_DELAY);
+        bool current_led_1 = handles->deviceState.led_1;
+        bool current_led_2 = handles->deviceState.led_2;
+        xSemaphoreGive(handles->mutexDeviceState);
+
+        // Apply physical changes if state has diverged from tracking
+        if (current_led_1 != last_led_1) {
+            rgb_4_led.setPixelColor(LED_1_PIN, current_led_1 ? rgb_4_led.Color(255, 255, 255) : rgb_4_led.Color(0, 0, 0));
+            rgb_4_led.show();
+            last_led_1 = current_led_1;
+        }
+
+        if (current_led_2 != last_led_2) {
+            rgb_4_led.setPixelColor(LED_2_PIN, current_led_2 ? rgb_4_led.Color(255, 255, 255) : rgb_4_led.Color(0, 0, 0));
+            rgb_4_led.show();
+            last_led_2 = current_led_2;
+        }
+
+        // BOOT Button logic 
         if (digitalRead(0) == LOW) {
             vTaskDelay(pdMS_TO_TICKS(100));
             if (digitalRead(0) == LOW) {
-                // Serial.println("Boot button pressed");
+                // Reserved 
             }
         }
         

@@ -3,6 +3,8 @@
 WiFiClient espClient;
 PubSubClient client(espClient);
 
+static SystemHandles* pGlobalHandles_coreIOT = NULL;
+
 void callback(char* topic, byte* payload, unsigned int length) {
   Serial.print("[CoreIOT] Message arrived [");
   Serial.print(topic);
@@ -33,12 +35,18 @@ void callback(char* topic, byte* payload, unsigned int length) {
 
     if (strcmp(params, "ON") == 0) {
       Serial.println("[CoreIOT] Device turned ON via RPC.");
-      //TODO
-
+      if (pGlobalHandles_coreIOT) {
+          xSemaphoreTake(pGlobalHandles_coreIOT->mutexDeviceState, portMAX_DELAY);
+          pGlobalHandles_coreIOT->deviceState.led_1 = true;
+          xSemaphoreGive(pGlobalHandles_coreIOT->mutexDeviceState);
+      }
     } else {   
       Serial.println("[CoreIOT] Device turned OFF via RPC.");
-      //TODO
-
+      if (pGlobalHandles_coreIOT) {
+          xSemaphoreTake(pGlobalHandles_coreIOT->mutexDeviceState, portMAX_DELAY);
+          pGlobalHandles_coreIOT->deviceState.led_1 = false;
+          xSemaphoreGive(pGlobalHandles_coreIOT->mutexDeviceState);
+      }
     }
   } else {
     Serial.print("[CoreIOT] Unknown method: ");
@@ -48,6 +56,7 @@ void callback(char* topic, byte* payload, unsigned int length) {
 
 void coreiot_task(void *pvParameters){
     SystemHandles* sysHandles = (SystemHandles*)pvParameters;
+    pGlobalHandles_coreIOT = sysHandles;
     
     // Set callback initially
     client.setCallback(callback);

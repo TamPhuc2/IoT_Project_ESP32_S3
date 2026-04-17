@@ -41,4 +41,6 @@ The graphical web interface files reside in the `data/` folder and must be uploa
 ### 3. Uploading Code & Monitoring
 1. Within the same **Project Tasks** panel, head to `yolo_uno` -> `General`.
 2. Click **Build** to verify, and then **Upload** to compile and push the C++ source code to the board.
-3. Open the **Serial Monitor** (plug icon on the bottom toolbar) to verify operations at a `115200` baud rate.
+3. Open the **Serial Monitor** (plug icon on the bottom toolbar) to verify operations at a `115200` baud rate. 
+
+

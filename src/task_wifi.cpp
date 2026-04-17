@@ -2,22 +2,40 @@
 
 static SystemHandles* pGlobalHandles = NULL;
 
+static int wifi_retry_count = 0;
+const int MAX_WIFI_RETRIES = 5;
+
 void WiFiEvent(WiFiEvent_t event) {
     switch(event) {
         case ARDUINO_EVENT_WIFI_STA_START:
-            Serial.println("[WiFi] Đang bắt đầu chế độ Station...");
+            Serial.println("[WiFi] Starting station mode");
             break;
         case ARDUINO_EVENT_WIFI_STA_CONNECTED:
-            Serial.println("[WiFi] Đã kết nối với Router thành công.");
+            Serial.println("[WiFi] Connected successful");
+            wifi_retry_count = 0; //set counter retry = 0
             break;
         case ARDUINO_EVENT_WIFI_STA_GOT_IP:
-            Serial.print("[WiFi] Đã nhận IP: ");
+            Serial.print("[WiFi] Get IP: ");
             Serial.println(WiFi.localIP());
             break;
         case ARDUINO_EVENT_WIFI_STA_DISCONNECTED:
-            Serial.println("[WiFi] Mất kết nối. Đang ngầm dò sóng để tái kết nối (Zero-Delay)...");
+            wifi_retry_count++;
+            Serial.print("[WiFi] Disconnected (Time: ");
+            Serial.print(wifi_retry_count);
+            Serial.println(")- Reconnectting...");
+            
             if (pGlobalHandles) {
                 xSemaphoreTake(pGlobalHandles->mutexConfig, portMAX_DELAY);
+                
+                // Kích hoạt Fallback nếu thử quá số lần (sai pass hoặc trùng tên)
+                if (wifi_retry_count >= MAX_WIFI_RETRIES && !pGlobalHandles->sysData.fallback_ssid.isEmpty()) {
+                    Serial.println("[WiFi-Manager] Phát hiện lỗi mạng mới! Tự động khôi phục mạng WiFi cũ...");
+                    pGlobalHandles->sysData.wifi_ssid = pGlobalHandles->sysData.fallback_ssid;
+                    pGlobalHandles->sysData.wifi_pass = pGlobalHandles->sysData.fallback_pass;
+                    // Đặt lại bộ đếm để tiếp tục retry cho mạng cũ thay vì loop fallback
+                    wifi_retry_count = 0; 
+                }
+
                 String safe_ssid = pGlobalHandles->sysData.wifi_ssid;
                 String safe_pass = pGlobalHandles->sysData.wifi_pass;
                 xSemaphoreGive(pGlobalHandles->mutexConfig);

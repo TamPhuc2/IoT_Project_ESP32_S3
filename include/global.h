@@ -29,6 +29,8 @@
 struct SystemData {
     String wifi_ssid;
     String wifi_pass;
+    String fallback_ssid;
+    String fallback_pass;
     String coreiot_server;
     String coreiot_port;
     String coreiot_token;
