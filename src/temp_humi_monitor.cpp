@@ -1,19 +1,24 @@
 #include "temp_humi_monitor.h"
-DHT20 dht20;
-LiquidCrystal_I2C lcd(33,16,2);
 
 // format lcd buffer 
-static void temp_humi_update_buffer_lcd(char buf[2][17], float temp, float humi, int state){
-    const char* statusStr = "";
-    if (state == CRITICAL_COLD) statusStr = "CRITICAL_COLD";
-    else if (state == COOL) statusStr = "COOL";
-    else if (state == NORMAL) statusStr = "NORMAL";
-    else if (state == HOT) statusStr = "HOT";
-    else if (state == CRITICAL_HOT) statusStr = "CRITICAL_HOT";
+static void temp_humi_update_buffer_lcd(char buf[2][17], float temp, float humi, int state, bool isTinyML, String predict_state){
+    String statusStr = "";
+    if (isTinyML) {
+        statusStr = "tinyml- " + predict_state;
+    } else {
+        if (state == CRITICAL_COLD) statusStr = "CRITICAL_COLD";
+        else if (state == COOL) statusStr = "COOL";
+        else if (state == NORMAL) statusStr = "NORMAL";
+        else if (state == HOT) statusStr = "HOT";
+        else if (state == CRITICAL_HOT) statusStr = "CRITICAL_HOT";
+    }
 
     // center align
-    int len = strlen(statusStr);
-    int padding = (16 - len) / 2;
+    int len = statusStr.length();
+    int padding = 0;
+    if (len < 16) {
+        padding = (16 - len) / 2;
+    }
     
     // clear previous screen
     char tempBuf[17];
@@ -21,14 +26,15 @@ static void temp_humi_update_buffer_lcd(char buf[2][17], float temp, float humi,
     tempBuf[16] = '\0';
     
     // print statusStr into LCD
-    memcpy(tempBuf + padding, statusStr, len);
+    memcpy(tempBuf + padding, statusStr.c_str(), len > 16 ? 16 : len);
     snprintf(buf[0], 17, "%s", tempBuf);
 
     // format temp and humi value
-    snprintf(buf[1], 17, "t:%2.1fC - h:%2.1f%%", temp, humi);
+    snprintf(buf[1], 17, "T:%2.1fC . H:%2.1f%%", temp, humi);
 }
 
 void temp_humi_monitor(void *pvParameters){
+  DHT20 dht20;
   SystemHandles* handles = (SystemHandles*)pvParameters;
   int lastState = -1;
 
@@ -76,10 +82,22 @@ void temp_humi_monitor(void *pvParameters){
     xQueueOverwrite(handles->qNeo, &freshData);
     xQueueOverwrite(handles->qLcd, &freshData);
 
-    // Give Semaphore to wake up LCD task if there's a state change or if it's the very first loop!
-    if (currentState != lastState) {
-        xSemaphoreGive(handles->semLcd);
-        lastState = currentState;
+    // Get current tinyml_mode
+    xSemaphoreTake(handles->mutexDeviceState, portMAX_DELAY);
+    bool is_tinyml = handles->deviceState.tinyml_mode;
+    xSemaphoreGive(handles->mutexDeviceState);
+
+    if (is_tinyml) {
+        // Send trigger to TinyML task
+        int trigger = 1;
+        xQueueSend(handles->qTrigger, &trigger, 0);
+        // Note: semLcd for TinyML mode will be given by the TinyML task when its predict_state changes!
+    } else {
+        // Give Semaphore to wake up LCD task if there's a state change or if it's the very first loop!
+        if (currentState != lastState) {
+            xSemaphoreGive(handles->semLcd);
+            lastState = currentState;
+        }
     }
 
     Serial.print("Temp: "); Serial.print(temperature); Serial.print(" *C ");
@@ -90,6 +108,7 @@ void temp_humi_monitor(void *pvParameters){
 }
 
 void temp_humi_lcd_display(void *pvParameters){
+    LiquidCrystal_I2C lcd(33,16,2);
     SystemHandles* handles = (SystemHandles*)pvParameters;
     SensorData data;
     char local_lcd_buffer[2][17] = {"                ", "                "};
@@ -108,7 +127,19 @@ void temp_humi_lcd_display(void *pvParameters){
 
       // peek the data from queue (non-blocking)
       if (xQueuePeek(handles->qLcd, &data, 0) == pdTRUE) {
-          temp_humi_update_buffer_lcd(local_lcd_buffer, data.temperature, data.humidity, data.state);
+          xSemaphoreTake(handles->mutexDeviceState, portMAX_DELAY);
+          bool is_tinyml = handles->deviceState.tinyml_mode;
+          xSemaphoreGive(handles->mutexDeviceState);
+
+          String predict_state = "WAITING";
+          if (is_tinyml) {
+              TinyMLData ml_data = {0, ""};
+              if (handles->qTinyML != NULL && xQueuePeek(handles->qTinyML, &ml_data, 0) == pdTRUE) {
+                  predict_state = ml_data.predict_state;
+              }
+          }
+
+          temp_humi_update_buffer_lcd(local_lcd_buffer, data.temperature, data.humidity, data.state, is_tinyml, predict_state);
           
           xSemaphoreTake(handles->mutexI2C, portMAX_DELAY);
           lcd.setCursor(0, 0);

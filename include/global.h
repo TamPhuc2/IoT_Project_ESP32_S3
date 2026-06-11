@@ -7,6 +7,10 @@
 #include "freertos/semphr.h"
 #include "freertos/queue.h"
 
+// IP LOCAL BROKER ADDRESS(Python Edge Gateway)
+#define LOCAL_BROKER_IP "172.20.10.4"
+// #define LOCAL_BROKER_IP "10.0.217.167"
+
 // threhold of temp and humi
 #define TEMP_CRITICAL_COLD      10
 #define TEMP_COOL               18
@@ -38,6 +42,7 @@ struct SystemData {
     String ap_pass;
 };
 
+
 // --- RTOS DATA STRUCTURES ---
 // struct for data transmission across queues
 struct SensorData {
@@ -46,8 +51,17 @@ struct SensorData {
     int state;
 };
 
+struct TinyMLData{
+    float predict_value;
+    String predict_state;
+};
+
+#define POWER_PIN 47
 #define LED_PIN 38
 #define FAN_PIN 48
+
+#define ACTUATOR_1_PIN 45
+#define ACTUATOR_2_PIN 48
 
 #define LED_1_PIN   0
 #define LED_2_PIN   1
@@ -56,6 +70,7 @@ struct SensorData {
 struct DeviceStates {
     bool led_1;
     bool led_2;
+    bool tinyml_mode;
 };
 
 // struct holding system handles injected into tasks
@@ -63,6 +78,8 @@ struct SystemHandles {
     QueueHandle_t qLed;         // queue for led_blinky task
     QueueHandle_t qNeo;         // queue for neo_blinky task
     QueueHandle_t qLcd;         // queue for temp_humi_lcd_display task
+    QueueHandle_t qTinyML;      // queue for tinyML task
+    QueueHandle_t qTrigger;     // queue trigger để đánh thức TinyML task
     SemaphoreHandle_t semLcd;   // binary semaphore to wake up LCD
     SemaphoreHandle_t mutexI2C; // mutex of I2C bus
     SemaphoreHandle_t mutexDeviceState; // mutex for DeviceStates

@@ -2,7 +2,8 @@
 #define __TASK_WIFI_H__
 
 #include <WiFi.h>
-#include "global.h"
+#include <task_check_info.h>
+#include <task_webserver.h>
 
 void init_wifi(SystemHandles* handles);
 

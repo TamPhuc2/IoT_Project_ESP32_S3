@@ -4,14 +4,19 @@
   <meta charset="UTF-8">
   <title>Dashboard Cảm Biến IoT trên YOLO_UNO</title>
 
+  <!-- Liên kết CSS -->
   <link rel="stylesheet" href="style.css">
+  <!-- //<script src="https://cdn.jsdelivr.net/npm/chart.js"></script> -->
+  <script src="chart.js"></script>
 </head>
 
 <body>
+  <!-- <h1>
+    Dashboard Cảm Biến IoT trên YOLO_UNO
+  </h1> -->
   <div class="page-title">
     Dashboard Cảm Biến IoT trên YOLO_UNO
   </div>
-  
   <div class="top-bar">
     <div class="left-text">Giám sát và điều khiển thiết bị theo thời gian thực</div>
     <div class="right-text">
@@ -20,7 +25,6 @@
       <img src="icon\wifi.png" alt="WiFi Config" id="wifi-icon" style="width:24px; vertical-align:middle; margin-left:15px; cursor:pointer;" title="Cấu hình WiFi & MQTT">
     </div>
   </div>
-
   <div class="grid-container">
     <div class="card temperature">
       <div class="header">
@@ -28,9 +32,9 @@
         <img src="icon\temperature.png" alt="Icon" style="width:24px; vertical-align:middle; margin-right:8px;">
       </div>
       <div class="value">
-        <div class="sensor">
-          <span id="temp">--</span>
-        </div>
+      <div class="sensor">
+        <span id="temp">--</span>
+      </div>
       </div>
       <div id="tempChange"></div>
     </div>
@@ -41,9 +45,9 @@
         <img src="icon\humidity.png" alt="Icon" style="width:24px; vertical-align:middle; margin-right:8px;">
       </div>
       <div class="value">
-        <div class="sensor">
-          <span id="hum">--</span>
-        </div>
+      <div class="sensor">
+        <span id="hum">--</span>
+      </div>
       </div> 
       <div id="humChange"></div>
     </div>
@@ -52,30 +56,58 @@
       <div class="header">
         <h1>Bảng điều khiển chính</h1>
       </div>
-
+      <!-- <div class="control-row">
+      <h2> 
+        <img src="icon\power.png" alt="Icon" style="width:24px; vertical-align:middle; margin-right:8px;">
+        Nguồn chính  
+      </h2>
+      <button id="btn-power" class="btn-power">Bật Nguồn</button>
+      </div>  -->
       <div class="control-row">
-        <h2>
-          <img src="icon\lamp.png" alt="Icon" style="width:24px; vertical-align:middle; margin-right:8px;">
-          Đèn 1 
-        </h2>
-        <button id="btn-led1" class="btn-led1 off">Bật Đèn</button>
+      <h2>
+        <img src="icon\lamp.png" alt="Icon" style="width:24px; vertical-align:middle; margin-right:8px;">
+        Đèn 1 
+      </h2>
+      <button id="btn-led1" class="btn-led1">Bật Đèn</button>
       </div>
-      
       <div class="control-row">
-        <h2>
-          <img src="icon\lamp.png" alt="Icon" style="width:24px; vertical-align:middle; margin-right:8px;">
-          Đèn 2 
-        </h2>
-        <button id="btn-led2" class="btn-led2 off">Bật Đèn</button>
+      <h2>
+        <img src="icon\lamp.png" alt="Icon" style="width:24px; vertical-align:middle; margin-right:8px;">
+        Đèn 2 
+      </h2>
+      <button id="btn-led2" class="btn-led2">Bật Đèn</button>
       </div>
-
+      <!-- <div class="control-row">
+      <h2>
+        <img src="icon\fan.png" alt="Icon" style="width:24px; vertical-align:middle; margin-right:8px;">
+        Quạt
+      </h2>
+      <button id="btn-fan" class="btn-fan">Bật Quạt</button>
+      </div> -->
       <h2>  
         <div class="control-center">
-          <button id="btn-refresh" class="btn-refresh">Làm Mới Dữ Liệu</button>
+          <!-- <button id="btn-refresh" class="btn-refresh">Làm Mới Dữ Liệu</button> -->
           <button id="btn-off" class="btn-off">Tắt Tất Cả Thiết Bị</button>
         </div>
       </h2>
     </div>
+
+    <div class="card tinyML">
+      <div class="header">
+        <h1>Dự đoán trạng thái</h1>
+      </div>
+      <div class="control-row">
+        <h2>
+          <div id="predict-state">
+          </div>
+        </h2>
+        <label class="switch">
+          <input type="checkbox" id="switch">
+          <span class="slider"></span>
+        </label>
+      </div>
+    </div>
+  
 
     <div class="card chart-temp">
       <div class="header">
@@ -90,9 +122,9 @@
       </div>
       <canvas id="humChart"></canvas>
     </div>
-  </div>
-
-  <div id="configModal" class="modal">
+</div>
+    
+<div id="configModal" class="modal">
     <div class="modal-content card">
       <span class="close-btn">&times;</span>
       <div class="header" style="justify-content: center; margin-bottom: 20px;">
@@ -131,8 +163,10 @@
       </form>
     </div>
   </div>
-    
+  <!-- Chart.js -->
+  <!-- <script src="https://cdn.jsdelivr.net/npm/chart.js"></script> -->
   <script src="chart.js"></script>
+  <!-- JS của bạn -->
   <script src="script.js"></script>
 </body>
 </html>

@@ -46,7 +46,7 @@ body {
   display: grid;
   grid-template-areas:
     "temp chartTemp control"
-    "hum  chartHum  control";
+    "hum  chartHum  tinyML";
   grid-template-columns: 0.5fr 1fr 1fr; 
   gap: 20px;
 }
@@ -70,6 +70,7 @@ body {
   grid-area: control;
   height: 100%;
 }
+.tinyML {grid-area: tinyML;}
 
 /* ===== HEADER ===== */
 .header {
@@ -102,6 +103,13 @@ body {
 .change.up { color: green; }
 .change.down { color: red; }
 
+/* ===== ICON ===== */
+.icon {
+  width: 24px;
+  height: 24px;
+  margin-left: 8px;
+}
+
 /* ===== CONTROL ===== */
 .control-center {
   display: flex;
@@ -132,18 +140,23 @@ button {
   font-size: 0.85em;
 }
 
+/* ===== TRẠNG THÁI ON ===== */
 button.on {
   background: #00ffcc;
   color: #000;
 }
 
+/* ===== TRẠNG THÁI OFF (tối hơn) ===== */
 button.off {
-  background: #00997a;
+  background: #00997a; /* màu tối hơn */
   color: #fff;
 }
 
+/* Button variants */
+.btn-power,
 .btn-led1,
-.btn-led2 {
+.btn-led2,
+.btn-fan {
   width: 120px;
   text-align: center;
 }
@@ -152,6 +165,11 @@ button.off {
   font-size: 0.7em;
 }
 
+/* .btn-off:hover {
+  background: #cc0000;
+} */ 
+ 
+ /* ===== NÚT TẮT TẤT CẢ  ===== */
 .btn-off {
   background: #ff4d4d !important;
   color: #fff !important;
@@ -160,6 +178,53 @@ button.off {
 
 .btn-off:hover {
   background: #cc0000 !important;
+}
+
+/* Container của switch */
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 50px;
+  height: 28px;
+}
+
+/* Ẩn checkbox mặc định */
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+/* Thanh trượt */
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background-color: #ccc;
+  transition: 0.4s;
+  border-radius: 28px;
+}
+
+/* Nút tròn bên trong */
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 22px;
+  width: 22px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  transition: 0.4s;
+  border-radius: 50%;
+}
+
+/* Khi bật */
+.switch input:checked + .slider {
+  background-color: #4CAF50;
+}
+
+.switch input:checked + .slider:before {
+  transform: translateX(22px);
 }
 
 /* ===== CHART ===== */
@@ -285,6 +350,8 @@ canvas {
 }
 
 /* ===== RESPONSIVE ===== */
+
+/* Tablet */
 @media (max-width: 1024px) {
   .grid-container {
     grid-template-areas:
@@ -292,11 +359,13 @@ canvas {
       "hum hum"
       "chartTemp chartTemp"
       "chartHum chartHum"
-      "control control";
+      "control control"
+      "tinyML tinyML";
     grid-template-columns: 1fr 1fr;
   }
 }
 
+/* Mobile */
 @media (max-width: 600px) {
   body {
     padding: 10px;
@@ -308,7 +377,8 @@ canvas {
       "hum"
       "chartTemp"
       "chartHum"
-      "control";
+      "control"
+      "tinyML";
     grid-template-columns: 1fr;
   }
 

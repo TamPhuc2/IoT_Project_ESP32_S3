@@ -1,6 +1,6 @@
 #include "task_webserver.h"
 
-AsyncWebServer Asyncserver(80);
+AsyncWebServer server(80);
 AsyncWebSocket ws("/ws");
 
 bool webserver_isrunning = false;
@@ -18,14 +18,11 @@ void Webserver_sendata(String data)
     }
 }
 
-void onEvent(AsyncWebSocket *server, AsyncWebSocketClient *client,
-             AwsEventType type, void *arg, uint8_t *data, size_t len)
+void onEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type, void *arg, uint8_t *data, size_t len)
 {
     if (type == WS_EVT_CONNECT)
     {
-        Serial.printf("WebSocket client #%u connected from %s\n",
-                      client->id(),
-                      client->remoteIP().toString().c_str());
+        Serial.printf("WebSocket client #%u connected from %s\n", client->id(), client->remoteIP().toString().c_str());
     }
     else if (type == WS_EVT_DISCONNECT)
     {
@@ -39,6 +36,7 @@ void onEvent(AsyncWebSocket *server, AsyncWebSocketClient *client,
         {
             String message;
             message += String((char *)data).substring(0, len);
+            // parseJson(message, true);
             handleWebSocketMessage(message);
         }
     }
@@ -47,33 +45,22 @@ void onEvent(AsyncWebSocket *server, AsyncWebSocketClient *client,
 void connnectWSV()
 {
     ws.onEvent(onEvent);
-    Asyncserver.addHandler(&ws);
-
-    Asyncserver.on("/", HTTP_GET, [](AsyncWebServerRequest *request)
-    {
-        request->send(LittleFS, "/index.html", "text/html");
-    });
-
-    Asyncserver.on("/script.js", HTTP_GET, [](AsyncWebServerRequest *request)
-    {
-        request->send(LittleFS, "/script.js", "application/javascript");
-    });
-
-    Asyncserver.on("/styles.css", HTTP_GET, [](AsyncWebServerRequest *request)
-    {
-        request->send(LittleFS, "/styles.css", "text/css");
-    });
-
-    Asyncserver.begin();
-    ElegantOTA.begin(&Asyncserver);
-
+    server.addHandler(&ws);
+    server.on("/", HTTP_GET, [](AsyncWebServerRequest *request)
+              { request->send(LittleFS, "/index.html", "text/html"); });
+    server.on("/script.js", HTTP_GET, [](AsyncWebServerRequest *request)
+              { request->send(LittleFS, "/script.js", "application/javascript"); });
+    server.on("/styles.css", HTTP_GET, [](AsyncWebServerRequest *request)
+              { request->send(LittleFS, "/styles.css", "text/css"); });
+    server.begin();
+    ElegantOTA.begin(&server);
     webserver_isrunning = true;
 }
 
 void Webserver_stop()
 {
     ws.closeAll();
-    Asyncserver.end();
+    server.end();
     webserver_isrunning = false;
 }
 

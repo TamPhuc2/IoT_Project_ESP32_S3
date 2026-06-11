@@ -1,8 +1,5 @@
 #include "coreiot.h"
 
-WiFiClient espClient;
-PubSubClient client(espClient);
-
 static SystemHandles* pGlobalHandles_coreIOT = NULL;
 
 void callback(char* topic, byte* payload, unsigned int length) {
@@ -54,9 +51,14 @@ void callback(char* topic, byte* payload, unsigned int length) {
   }
 }
 
+#include "global.h"
+
 void coreiot_task(void *pvParameters){
     SystemHandles* sysHandles = (SystemHandles*)pvParameters;
     pGlobalHandles_coreIOT = sysHandles;
+
+    WiFiClient espClient;
+    PubSubClient client(espClient);
     
     // Set callback initially
     client.setCallback(callback);
@@ -64,6 +66,8 @@ void coreiot_task(void *pvParameters){
     String currentServer = "";
     int currentPort = 0;
     String currentToken = "";
+    
+    bool usingLocalBroker = false;
 
     while(1){
         // Only attempt communication if WiFi is actually connected
@@ -76,31 +80,36 @@ void coreiot_task(void *pvParameters){
             String safeToken = sysHandles->sysData.coreiot_token;
             xSemaphoreGive(sysHandles->mutexConfig);
             
-            // Re-setup server target if the config changed (from the UI)
-            if (safeServer != currentServer || safePort != currentPort) {
-                 client.disconnect();
-                 currentServer = safeServer;
-                 currentPort = safePort;
-                 client.setServer(currentServer.c_str(), currentPort);
-            }
-            currentToken = safeToken;
-
             // Maintain MQTT connection
-            if (!client.connected() && !safeServer.isEmpty() && !safeToken.isEmpty()) {
-                Serial.print("[CoreIOT] Attempting MQTT connection to ");
-                Serial.print(currentServer);
-                Serial.println("...");
-                String clientId = "ESP32Client-";
+            if (!client.connected()) {
+                // prepare client ID and connection parameters
+                String clientId = "NodeAClient-";
                 clientId += String(random(0xffff), HEX);
                 
-                // Connect with Token as Username for CoreIOT
-                if (client.connect(clientId.c_str(), currentToken.c_str(), NULL)) {
-                    Serial.println("[CoreIOT] connected to CoreIOT Server!");
-                    client.subscribe("v1/devices/me/rpc/request/+");
+                // Connect to local broker (Edge Gateway) first
+                Serial.print("[CoreIOT/Fallback] Attemping Local Broker: ");
+                Serial.println(LOCAL_BROKER_IP);
+                client.setServer(LOCAL_BROKER_IP, 1883);
+                
+                if (client.connect(clientId.c_str())) {
+                    Serial.println("[CoreIOT] Connected to Local Broker (M2M)!");
+                    usingLocalBroker = true;
                 } else {
-                    Serial.print("[CoreIOT] failed, rc=");
-                    Serial.print(client.state());
-                    Serial.println(" try again later");
+                    // Failed to connect to local broker =>  try CoreIOT Cloud
+                    Serial.println("[CoreIOT] Local Broker Failed. Falling back to CoreIOT Cloud!");
+                    if (!safeServer.isEmpty() && !safeToken.isEmpty()) {
+                        client.setServer(safeServer.c_str(), safePort);
+                        // Connect with Token as Username
+                        if (client.connect(clientId.c_str(), safeToken.c_str(), NULL)) {
+                            Serial.println("[CoreIOT] Connected safely to CoreIOT Cloud Server!");
+                            client.subscribe("v1/devices/me/rpc/request/+"); // Open RPC Cloud
+                            usingLocalBroker = false;
+                        } else {
+                            Serial.print("[CoreIOT] Cloud Failed rc=");
+                            Serial.print(client.state());
+                            Serial.println(". Reconnecting...");
+                        }
+                    }
                 }
             }
             
@@ -121,11 +130,45 @@ void coreiot_task(void *pvParameters){
                     }
                 }
 
-                String payload = "{\"temperature\":" + String(temp, 1) +  ",\"humidity\":" + String(humi, 1) + "}";
-                
-                client.publish("v1/devices/me/telemetry", payload.c_str());
-                Serial.print("[CoreIOT] Published payload: ");
-                Serial.println(payload);
+                String payload = "";
+                String targetTopic = "";
+
+                if (usingLocalBroker) {
+                    // Cấu trúc Payload và Topic dành cho Edge Gateway (Python Rule Engine)
+                    payload = "{\"id\":\"Node_A\",\"temperature\":" + String(temp, 1) +  ",\"humidity\":" + String(humi, 1) + "}";
+                    targetTopic = "home/sensors";
+                // } else {
+                //     // Cấu trúc Payload và Topic đẩy nguyên bản lên CoreIOT Cloud
+                //     //payload = "{\"temperature\": " + String(temp, 1) +  ",\"humidity\": " + String(humi, 1) + "}";
+                //     payload = "{\"id\":\"Node_A1\",\"temperature\":" + String(temp, 1) +  ",\"humidity\":" + String(humi, 1) + "}";
+                //     // targetTopic = "v1/devices/me/telemetry";
+                //    // payload = "{\"id\":\"Node_A1\",\"temperature\":" + String(temp, 1) +  ",\"humidity\":" + String(humi, 1) + "}";
+                //     targetTopic = "v1/gateway/telemetry";
+                // }
+                } else {
+    
+                    String device_name = "Node_A";
+                    unsigned long ts = millis(); // Giả lập timestamp hoặc dùng giá trị thực
+    
+                    payload = "{\"" + device_name + "\": [";
+                    payload += "{";
+                    payload += "\"ts\":" + String(ts) + ",";
+                    payload += "\"values\": {";
+                    payload += "\"temperature\":" + String(temp, 1) + ",";
+                    payload += "\"humidity\":" + String(humi, 1);
+                    payload += "}"; // đóng values
+                    payload += "}"; // đóng object trong array
+                    payload += "]}"; // đóng array và object tổng
+    
+                    targetTopic = "v1/gateway/telemetry";
+                }
+                if (client.publish(targetTopic.c_str(), payload.c_str())) {
+                    Serial.print("[CoreIOT/Telemetry] Published to ");
+                    Serial.print(usingLocalBroker ? "LOCAL: " : "CLOUD: ");
+                    Serial.println(payload);
+                } else {
+                    Serial.println("[CoreIOT/Telemetry] Error: Data Publish failed.");
+                }
             }
         } else {
             // Mất mạng nội hạt, ngắt kết nối PubSub
@@ -133,7 +176,6 @@ void coreiot_task(void *pvParameters){
                 client.disconnect();
             }
         }
-
         vTaskDelay(10000 / portTICK_PERIOD_MS);  // Publish every 10 seconds
     }
 }

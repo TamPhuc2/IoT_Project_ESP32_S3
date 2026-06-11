@@ -29,7 +29,7 @@ void WiFiEvent(WiFiEvent_t event) {
                 
                 // Kích hoạt Fallback nếu thử quá số lần (sai pass hoặc trùng tên)
                 if (wifi_retry_count >= MAX_WIFI_RETRIES && !pGlobalHandles->sysData.fallback_ssid.isEmpty()) {
-                    Serial.println("[WiFi-Manager] Phát hiện lỗi mạng mới! Tự động khôi phục mạng WiFi cũ...");
+                    Serial.println("[WiFi-Manager] Detection of new network error! Automatically restoring old WiFi network...");
                     pGlobalHandles->sysData.wifi_ssid = pGlobalHandles->sysData.fallback_ssid;
                     pGlobalHandles->sysData.wifi_pass = pGlobalHandles->sysData.fallback_pass;
                     // Đặt lại bộ đếm để tiếp tục retry cho mạng cũ thay vì loop fallback
@@ -52,13 +52,12 @@ void WiFiEvent(WiFiEvent_t event) {
 void init_wifi(SystemHandles* handles) {
     pGlobalHandles = handles;
     
-    // Cấu hình Dual Mode ngay từ đầu theo Task 6
     WiFi.mode(WIFI_AP_STA);
     
-    // Khởi tạo Event Handler
+    // init Event Handler
     WiFi.onEvent(WiFiEvent);
     
-    // Lấy thông số từ struct (Zero Global)
+    // get wifi config safely
     xSemaphoreTake(handles->mutexConfig, portMAX_DELAY);
     String target_ssid = handles->sysData.wifi_ssid;
     String target_pass = handles->sysData.wifi_pass;
@@ -66,12 +65,12 @@ void init_wifi(SystemHandles* handles) {
     String target_ap_pass = handles->sysData.ap_pass;
     xSemaphoreGive(handles->mutexConfig);
     
-    // Thiết lập AP Mode tại 192.168.4.1 ngay lập tức (Luôn duy trì)
+    // establish AP Mode at 192.168.4.1
     WiFi.softAP(target_ap_ssid.c_str(), target_ap_pass.c_str());
     Serial.print("\n[WiFi] Khởi động chế độ Access Point: ");
     Serial.println(WiFi.softAPIP());
 
-    // Thiết lập kết nối STA (Non-blocking hoàn toàn)
+    // establish STA Mode (Non-blocking)
     Serial.print("[WiFi] Đang dò sóng tới SSID: ");
     Serial.println(target_ssid);
     WiFi.begin(target_ssid.c_str(), target_pass.c_str());
